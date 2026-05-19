@@ -339,8 +339,10 @@ class _DashboardViewState extends State<DashboardView> {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
+            interval: 1,
             getTitlesWidget: (value, meta) {
               final index = value.toInt();
+              if (value != index.toDouble()) return const SizedBox();
               if (index >= 0 && index < _chartLabels.length) {
                 if (_currentFilter == '7d' ||
                     index % 5 == 0 ||

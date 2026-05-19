@@ -52,8 +52,8 @@ class Animal {
     return Animal(
       id: map['id'],
       nome: map['nome'],
-      idade: map['idade'],
-      raca: map['raca'],
+      idade: (map['idade'] as int?) ?? 0,
+      raca: (map['raca'] as String?) ?? '',
     );
   }
 }

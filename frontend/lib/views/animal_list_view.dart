@@ -104,33 +104,29 @@ class _AnimalListViewState extends State<AnimalListView> {
   void _confirmDelete(Animal animal) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Excluir Animal'),
         content: Text(
             'Deseja realmente excluir ${animal.nome}? Isso removerá todo o histórico de produção deste animal.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancelar')),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
               try {
                 await _apiService.deleteAnimal(animal.id!);
                 _refreshAnimals();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Animal excluído com sucesso')),
-                  );
-                }
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Animal excluído com sucesso')),
+                );
               } catch (_) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Erro ao excluir. Verifique a conexão.')),
-                  );
-                }
+                messenger.showSnackBar(
+                  const SnackBar(
+                      content: Text('Erro ao excluir. Verifique a conexão.')),
+                );
               }
             },
             child: const Text('Excluir', style: TextStyle(color: Colors.red)),
