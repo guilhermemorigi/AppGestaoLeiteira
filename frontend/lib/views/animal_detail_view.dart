@@ -96,8 +96,8 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text('Ficha: ${_animal.nome}'),
+        appBar: CustomAppBar(
+          title: 'Ficha: ${_animal.nome}',
           actions: [
             IconButton(
               icon: const Icon(Icons.edit),

@@ -66,7 +66,7 @@ class _HealthListViewState extends State<HealthListView> {
     final custoTotal = _records.fold<double>(0, (s, r) => s + r.custo);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Saúde & Tratamentos')),
+      appBar: const CustomAppBar(title: 'Saúde & Tratamentos'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class ReminderFormView extends StatefulWidget {
   const ReminderFormView({super.key});
@@ -52,7 +53,7 @@ class _ReminderFormViewState extends State<ReminderFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Novo Lembrete')),
+      appBar: const CustomAppBar(title: 'Novo Lembrete'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

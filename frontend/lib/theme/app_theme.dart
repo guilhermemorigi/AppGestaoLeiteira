@@ -88,6 +88,42 @@ class AppTheme {
   }
 }
 
+/// AppBar padrão do app: mostra botão de voltar sempre que a tela puder ser
+/// desempilhada (Navigator.canPop), garantindo comportamento consistente em
+/// todas as telas internas.
+class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final List<Widget>? actions;
+  final PreferredSizeWidget? bottom;
+
+  const CustomAppBar({
+    super.key,
+    required this.title,
+    this.actions,
+    this.bottom,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      title: Text(title),
+      leading: Navigator.canPop(context)
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Voltar',
+              onPressed: () => Navigator.of(context).pop(),
+            )
+          : null,
+      actions: actions,
+      bottom: bottom,
+    );
+  }
+
+  @override
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
+}
+
 /// Card de resumo com gradiente reutilizável (usado em dashboards e cabeçalhos).
 class SummaryCard extends StatelessWidget {
   final String title;

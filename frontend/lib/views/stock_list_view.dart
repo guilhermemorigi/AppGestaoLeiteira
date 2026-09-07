@@ -85,7 +85,7 @@ class _StockListViewState extends State<StockListView> {
     final lowCount = _items.where((e) => e.estoqueBaixo).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Estoque / Insumos')),
+      appBar: const CustomAppBar(title: 'Estoque / Insumos'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

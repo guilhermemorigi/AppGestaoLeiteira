@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class VaccineFormView extends StatefulWidget {
   final Animal? animal;
@@ -128,7 +129,7 @@ class _VaccineFormViewState extends State<VaccineFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar Vacina')),
+      appBar: const CustomAppBar(title: 'Registrar Vacina'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(

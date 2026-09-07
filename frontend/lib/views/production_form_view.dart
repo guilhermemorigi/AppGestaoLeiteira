@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class ProductionFormView extends StatefulWidget {
   const ProductionFormView({super.key});
@@ -89,9 +90,7 @@ class _ProductionFormViewState extends State<ProductionFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Registrar Produção'),
-      ),
+      appBar: const CustomAppBar(title: 'Registrar Produção'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(

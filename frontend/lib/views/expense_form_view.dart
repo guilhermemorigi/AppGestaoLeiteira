@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class _BrazilianCurrencyFormatter extends TextInputFormatter {
   final _fmt = NumberFormat('#,##0.00', 'pt_BR');
@@ -82,7 +83,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lançar Gasto')),
+      appBar: const CustomAppBar(title: 'Lançar Gasto'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

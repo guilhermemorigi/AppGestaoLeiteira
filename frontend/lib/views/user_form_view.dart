@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class UserFormView extends StatefulWidget {
   final User? user; // se informado, edição
@@ -86,7 +87,7 @@ class _UserFormViewState extends State<UserFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? 'Editar Usuário' : 'Novo Usuário')),
+      appBar: CustomAppBar(title: _isEdit ? 'Editar Usuário' : 'Novo Usuário'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

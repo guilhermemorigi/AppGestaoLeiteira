@@ -70,7 +70,7 @@ class _ReproductionListViewState extends State<ReproductionListView> {
     }).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reprodução')),
+      appBar: const CustomAppBar(title: 'Reprodução'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

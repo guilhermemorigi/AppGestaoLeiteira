@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class SignupView extends StatefulWidget {
   const SignupView({super.key});
@@ -59,7 +60,7 @@ class _SignupViewState extends State<SignupView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cadastrar Usuário')),
+      appBar: const CustomAppBar(title: 'Cadastrar Usuário'),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Form(

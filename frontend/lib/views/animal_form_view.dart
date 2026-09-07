@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class AnimalFormView extends StatefulWidget {
   final Animal? animal; // se informado, edição
@@ -93,7 +94,7 @@ class _AnimalFormViewState extends State<AnimalFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? 'Editar Animal' : 'Cadastrar Animal')),
+      appBar: CustomAppBar(title: _isEdit ? 'Editar Animal' : 'Cadastrar Animal'),
       body: _isSaving
           ? const Center(child: CircularProgressIndicator())
           : Padding(

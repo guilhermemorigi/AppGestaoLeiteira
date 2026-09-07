@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class StockFormView extends StatefulWidget {
   final StockItem? item; // se informado, edição
@@ -107,7 +108,7 @@ class _StockFormViewState extends State<StockFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? 'Editar Item' : 'Novo Item de Estoque')),
+      appBar: CustomAppBar(title: _isEdit ? 'Editar Item' : 'Novo Item de Estoque'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class ReproductionFormView extends StatefulWidget {
   final Animal? animal;
@@ -132,7 +133,7 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
     final mostrarTouro = _tipo == 'Cobertura' || _tipo == 'Inseminação';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar Reprodução')),
+      appBar: const CustomAppBar(title: 'Registrar Reprodução'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(

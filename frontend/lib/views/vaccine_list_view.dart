@@ -61,7 +61,7 @@ class _VaccineListViewState extends State<VaccineListView> {
     final pendentes = _vaccines.where(_isDoseProxima).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vacinação')),
+      appBar: const CustomAppBar(title: 'Vacinação'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

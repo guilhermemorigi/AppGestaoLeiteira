@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 
 class HealthFormView extends StatefulWidget {
   final Animal? animal; // pré-selecionado ao vir da ficha do animal
@@ -120,7 +121,7 @@ class _HealthFormViewState extends State<HealthFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar Saúde/Tratamento')),
+      appBar: const CustomAppBar(title: 'Registrar Saúde/Tratamento'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(

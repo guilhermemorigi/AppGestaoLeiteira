@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 import 'reminder_form_view.dart';
 
 class ReminderListView extends StatefulWidget {
@@ -44,6 +45,7 @@ class _ReminderListViewState extends State<ReminderListView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const CustomAppBar(title: 'Agenda / Manejo'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _reminders.isEmpty

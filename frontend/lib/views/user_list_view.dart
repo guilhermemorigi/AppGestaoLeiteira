@@ -52,7 +52,7 @@ class _UserListViewState extends State<UserListView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Usuários')),
+      appBar: const CustomAppBar(title: 'Usuários'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _users.isEmpty

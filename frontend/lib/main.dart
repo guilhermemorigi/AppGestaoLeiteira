@@ -86,8 +86,8 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_selectedIndex]),
+      appBar: CustomAppBar(
+        title: _titles[_selectedIndex],
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
