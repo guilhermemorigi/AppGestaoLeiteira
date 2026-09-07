@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
 import 'animal_detail_view.dart';
 import 'animal_form_view.dart';
 
@@ -58,16 +59,21 @@ class _AnimalListViewState extends State<AnimalListView> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _animals.isEmpty
-              ? const Center(child: Text('Nenhum animal cadastrado'))
+              ? const EmptyState(
+                  icon: Icons.pets_outlined,
+                  message: 'Nenhum animal cadastrado',
+                  hint: 'Toque em "Novo Animal" para começar.',
+                )
               : RefreshIndicator(
                   onRefresh: _refreshAnimals,
                   child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80),
                     itemCount: _animals.length,
                     itemBuilder: (context, index) {
                       final animal = _animals[index];
                       return Card(
                         margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                            horizontal: 12, vertical: 6),
                         child: ListTile(
                           onTap: () {
                             Navigator.push(
@@ -76,16 +82,30 @@ class _AnimalListViewState extends State<AnimalListView> {
                                 builder: (context) =>
                                     AnimalDetailView(animal: animal),
                               ),
-                            );
+                            ).then((_) => _refreshAnimals());
                           },
-                          leading: CircleAvatar(child: Icon(MdiIcons.cow)),
-                          title: Text(animal.nome,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 18)),
+                          leading: CircleAvatar(
+                            backgroundColor: AppTheme.primary.withOpacity(0.12),
+                            child: Icon(MdiIcons.cow, color: AppTheme.primary),
+                          ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(animal.nome,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17)),
+                              ),
+                              StatusChip(animal.status),
+                            ],
+                          ),
                           subtitle: Text(
-                              'Raça: ${animal.raca} | Idade: ${animal.idade} anos'),
+                            'Raça: ${animal.raca} • Idade: ${animal.idade} anos'
+                            '${animal.numeroBrinco?.isNotEmpty == true ? " • Brinco ${animal.numeroBrinco}" : ""}',
+                          ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.red),
                             onPressed: () => _confirmDelete(animal),
                           ),
                         ),

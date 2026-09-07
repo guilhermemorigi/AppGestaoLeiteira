@@ -33,6 +33,16 @@ public class AnimalController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<Animal> update(@PathVariable Long id, @RequestBody Animal animal) {
+        return repository.findById(id)
+                .map(existing -> {
+                    animal.setId(id);
+                    return ResponseEntity.ok(repository.save(animal));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!repository.existsById(id)) {

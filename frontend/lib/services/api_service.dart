@@ -76,6 +76,18 @@ class ApiService {
     }
   }
 
+  Future<Animal> updateAnimal(int id, Animal animal) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/animals/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(animal.toMap()),
+    );
+    if (response.statusCode == 200) {
+      return Animal.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao atualizar animal');
+  }
+
   Future<void> deleteAnimal(int id) async {
     try {
       final response = await http.delete(Uri.parse('$baseUrl/animals/$id'));
@@ -220,6 +232,255 @@ class ApiService {
     final response = await http.delete(Uri.parse('$baseUrl/reminders/$id'));
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Falha ao deletar lembrete');
+    }
+  }
+
+  // --- GERENCIAMENTO DE USUÁRIOS ---
+
+  Future<List<User>> getAllUsers() async {
+    final response = await http.get(Uri.parse('$baseUrl/users'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => User.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar usuários');
+  }
+
+  Future<User> updateUser(int id, User user) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(user.toMap()),
+    );
+    if (response.statusCode == 200) {
+      return User.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao atualizar usuário');
+  }
+
+  Future<void> deleteUser(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/users/$id'));
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Falha ao excluir usuário');
+    }
+  }
+
+  // --- ESTOQUE ---
+
+  Future<List<StockItem>> getAllStock() async {
+    final response = await http.get(Uri.parse('$baseUrl/stock'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => StockItem.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar estoque');
+  }
+
+  Future<StockItem> createStock(StockItem item) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/stock'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'nome': item.nome,
+        'categoria': item.categoria,
+        'quantidade': item.quantidade,
+        'unidade': item.unidade,
+        'quantidadeMinima': item.quantidadeMinima,
+        'precoUnitario': item.precoUnitario,
+        'validade': item.validade != null ? _fmt(item.validade!) : null,
+        'observacao': item.observacao,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return StockItem.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao criar item de estoque');
+  }
+
+  Future<StockItem> updateStock(int id, StockItem item) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/stock/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'nome': item.nome,
+        'categoria': item.categoria,
+        'quantidade': item.quantidade,
+        'unidade': item.unidade,
+        'quantidadeMinima': item.quantidadeMinima,
+        'precoUnitario': item.precoUnitario,
+        'validade': item.validade != null ? _fmt(item.validade!) : null,
+        'observacao': item.observacao,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return StockItem.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao atualizar item de estoque');
+  }
+
+  Future<StockItem> adjustStock(int id, double delta) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/stock/$id/quantidade?delta=$delta'),
+    );
+    if (response.statusCode == 200) {
+      return StockItem.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao ajustar quantidade');
+  }
+
+  Future<void> deleteStock(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/stock/$id'));
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Falha ao excluir item de estoque');
+    }
+  }
+
+  // --- SAÚDE E TRATAMENTOS ---
+
+  Future<List<HealthRecord>> getAllHealth() async {
+    final response = await http.get(Uri.parse('$baseUrl/health'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => HealthRecord.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar registros de saúde');
+  }
+
+  Future<List<HealthRecord>> getHealthByAnimal(int animalId) async {
+    final response =
+        await http.get(Uri.parse('$baseUrl/health/animal/$animalId'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => HealthRecord.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar saúde do animal');
+  }
+
+  Future<HealthRecord> createHealth(HealthRecord record) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/health'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'animal': {'id': record.animalId},
+        'tipo': record.tipo,
+        'descricao': record.descricao,
+        'medicamento': record.medicamento,
+        'veterinario': record.veterinario,
+        'data': _fmt(record.data),
+        'dataFim': record.dataFim != null ? _fmt(record.dataFim!) : null,
+        'custo': record.custo,
+        'status': record.status,
+        'observacao': record.observacao,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return HealthRecord.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao registrar saúde');
+  }
+
+  Future<void> deleteHealth(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/health/$id'));
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Falha ao excluir registro de saúde');
+    }
+  }
+
+  // --- VACINAS ---
+
+  Future<List<Vaccine>> getAllVaccines() async {
+    final response = await http.get(Uri.parse('$baseUrl/vaccines'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => Vaccine.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar vacinas');
+  }
+
+  Future<List<Vaccine>> getVaccinesByAnimal(int animalId) async {
+    final response =
+        await http.get(Uri.parse('$baseUrl/vaccines/animal/$animalId'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => Vaccine.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar vacinas do animal');
+  }
+
+  Future<Vaccine> createVaccine(Vaccine vaccine) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/vaccines'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'animal': {'id': vaccine.animalId},
+        'nome': vaccine.nome,
+        'dataAplicacao': _fmt(vaccine.dataAplicacao),
+        'proximaDose':
+            vaccine.proximaDose != null ? _fmt(vaccine.proximaDose!) : null,
+        'lote': vaccine.lote,
+        'veterinario': vaccine.veterinario,
+        'observacao': vaccine.observacao,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Vaccine.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao registrar vacina');
+  }
+
+  Future<void> deleteVaccine(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/vaccines/$id'));
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Falha ao excluir vacina');
+    }
+  }
+
+  // --- REPRODUÇÃO ---
+
+  Future<List<Reproduction>> getAllReproduction() async {
+    final response = await http.get(Uri.parse('$baseUrl/reproduction'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => Reproduction.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar reprodução');
+  }
+
+  Future<List<Reproduction>> getReproductionByAnimal(int animalId) async {
+    final response =
+        await http.get(Uri.parse('$baseUrl/reproduction/animal/$animalId'));
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => Reproduction.fromMap(item)).toList();
+    }
+    throw Exception('Falha ao carregar reprodução do animal');
+  }
+
+  Future<Reproduction> createReproduction(Reproduction r) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/reproduction'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'animal': {'id': r.animalId},
+        'tipo': r.tipo,
+        'data': _fmt(r.data),
+        'touro': r.touro,
+        'previsaoParto':
+            r.previsaoParto != null ? _fmt(r.previsaoParto!) : null,
+        'status': r.status,
+        'observacao': r.observacao,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Reproduction.fromMap(jsonDecode(response.body));
+    }
+    throw Exception('Falha ao registrar reprodução');
+  }
+
+  Future<void> deleteReproduction(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/reproduction/$id'));
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Falha ao excluir registro de reprodução');
     }
   }
 }

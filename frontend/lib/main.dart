@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'theme/app_theme.dart';
 import 'views/dashboard_view.dart';
 import 'views/animal_list_view.dart';
 import 'views/production_list_view.dart';
 import 'views/login_view.dart';
 import 'views/expense_list_view.dart';
-import 'views/reminder_list_view.dart';
+import 'views/more_menu_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +21,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Gestão Leiteira',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
       home: const LoginView(),
     );
   }
@@ -39,12 +37,12 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    const DashboardView(),
-    const AnimalListView(),
-    const ProductionListView(),
-    const ExpenseListView(),
-    const ReminderListView(),
+  static const List<Widget> _widgetOptions = <Widget>[
+    DashboardView(),
+    AnimalListView(),
+    ProductionListView(),
+    ExpenseListView(),
+    MoreMenuView(),
   ];
 
   final List<String> _titles = [
@@ -52,13 +50,11 @@ class _MainNavigationState extends State<MainNavigation> {
     'Animais Cadastrados',
     'Registros de Produção',
     'Controle de Gastos',
-    'Agenda de Manejo',
+    'Mais Funcionalidades',
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   void _logout() {
@@ -92,8 +88,6 @@ class _MainNavigationState extends State<MainNavigation> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_selectedIndex]),
-        backgroundColor: _selectedIndex == 0 ? Colors.green[700] : null,
-        foregroundColor: _selectedIndex == 0 ? Colors.white : null,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -103,33 +97,36 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: <NavigationDestination>[
+          const NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
             label: 'Relatório',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(MdiIcons.cow),
+            selectedIcon: Icon(MdiIcons.cow),
             label: 'Animais',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.water_drop),
+          const NavigationDestination(
+            icon: Icon(Icons.water_drop_outlined),
+            selectedIcon: Icon(Icons.water_drop),
             label: 'Produção',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.attach_money),
+          const NavigationDestination(
+            icon: Icon(Icons.attach_money_outlined),
+            selectedIcon: Icon(Icons.attach_money),
             label: 'Financeiro',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: 'Agenda',
+          const NavigationDestination(
+            icon: Icon(Icons.grid_view_outlined),
+            selectedIcon: Icon(Icons.grid_view),
+            label: 'Mais',
           ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green[800],
-        onTap: _onItemTapped,
       ),
     );
   }

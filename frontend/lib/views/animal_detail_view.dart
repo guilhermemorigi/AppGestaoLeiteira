@@ -3,6 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
+import 'animal_form_view.dart';
+import 'health_form_view.dart';
+import 'vaccine_form_view.dart';
+import 'reproduction_form_view.dart';
 
 class AnimalDetailView extends StatefulWidget {
   final Animal animal;
@@ -13,14 +18,20 @@ class AnimalDetailView extends StatefulWidget {
 }
 
 class _AnimalDetailViewState extends State<AnimalDetailView> {
+  late Animal _animal;
   List<Production> _history = [];
+  List<HealthRecord> _health = [];
+  List<Vaccine> _vaccines = [];
+  List<Reproduction> _reproduction = [];
   double _totalProduction = 0;
   double _averageProduction = 0;
   bool _isLoading = true;
+  final _api = ApiService();
 
   @override
   void initState() {
     super.initState();
+    _animal = widget.animal;
     _loadData();
   }
 
@@ -28,150 +39,308 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final data = await ApiService().getProductionByAnimal(widget.animal.id!);
-      final total = data.fold(0.0, (sum, p) => sum + p.quantidade);
+      final results = await Future.wait([
+        _api.getProductionByAnimal(_animal.id!),
+        _api.getHealthByAnimal(_animal.id!),
+        _api.getVaccinesByAnimal(_animal.id!),
+        _api.getReproductionByAnimal(_animal.id!),
+      ]);
+      final production = results[0] as List<Production>;
+      final total = production.fold(0.0, (s, p) => s + p.quantidade);
+      if (!mounted) return;
       setState(() {
-        _history = data;
+        _history = production;
+        _health = results[1] as List<HealthRecord>;
+        _vaccines = results[2] as List<Vaccine>;
+        _reproduction = results[3] as List<Reproduction>;
         _totalProduction = total;
-        _averageProduction = data.isEmpty ? 0 : total / data.length;
+        _averageProduction = production.isEmpty ? 0 : total / production.length;
         _isLoading = false;
       });
     } catch (_) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Erro ao carregar histórico do animal.')),
+          const SnackBar(content: Text('Erro ao carregar dados do animal.')),
         );
       }
     }
   }
 
+  Future<void> _edit() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AnimalFormView(animal: _animal)),
+    );
+    if (result == true) {
+      final atualizados = await _api.getAllAnimals();
+      final novo = atualizados.firstWhere((a) => a.id == _animal.id,
+          orElse: () => _animal);
+      setState(() => _animal = novo);
+      _loadData();
+    }
+  }
+
+  Future<void> _quickAdd(Widget page) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+    );
+    if (result == true) _loadData();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final numberFormat = NumberFormat.decimalPattern('pt_BR');
+    final nf = NumberFormat.decimalPattern('pt_BR');
 
-    return Scaffold(
-      appBar: AppBar(title: Text('Ficha: ${widget.animal.nome}')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      color: Colors.green[50],
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            child: Icon(MdiIcons.cow, size: 40),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.animal.nome,
-                                style: const TextStyle(
-                                    fontSize: 24, fontWeight: FontWeight.bold),
-                              ),
-                              Text('Raça: ${widget.animal.raca}'),
-                              Text('Idade: ${widget.animal.idade} anos'),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoCard(
-                              'Total Produzido',
-                              '${numberFormat.format(_totalProduction)} L',
-                              Icons.water_drop,
-                              Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildInfoCard(
-                              'Média Diária',
-                              '${numberFormat.format(_averageProduction)} L',
-                              Icons.speed,
-                              Colors.orange,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Histórico de Produção',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    const Divider(),
-                    _history.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(32.0),
-                            child: Text(
-                                'Nenhum registro encontrado para este animal.'),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _history.length,
-                            itemBuilder: (context, index) {
-                              final p = _history[index];
-                              return ListTile(
-                                leading:
-                                    const Icon(Icons.calendar_today, size: 20),
-                                title: Text(
-                                    DateFormat('dd/MM/yyyy').format(p.data)),
-                                trailing: Text(
-                                  '${numberFormat.format(p.quantidade)} L',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              );
-                            },
-                          ),
-                  ],
-                ),
-              ),
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Ficha: ${_animal.nome}'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _edit,
+              tooltip: 'Editar',
             ),
+          ],
+          bottom: const TabBar(
+            isScrollable: true,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: [
+              Tab(text: 'Produção', icon: Icon(Icons.water_drop)),
+              Tab(text: 'Saúde', icon: Icon(Icons.health_and_safety)),
+              Tab(text: 'Vacinas', icon: Icon(Icons.vaccines)),
+              Tab(text: 'Reprodução', icon: Icon(Icons.favorite)),
+            ],
+          ),
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  _buildHeader(nf),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildProductionTab(nf),
+                        _buildHealthTab(),
+                        _buildVaccinesTab(),
+                        _buildReproductionTab(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
-  Widget _buildInfoCard(
-      String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 8),
-            Text(title,
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            Text(
-              value,
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: color),
+  Widget _buildHeader(NumberFormat nf) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: AppTheme.primary.withOpacity(0.06),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: AppTheme.primary.withOpacity(0.15),
+            child: Icon(MdiIcons.cow, size: 34, color: AppTheme.primary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(_animal.nome,
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
+                    StatusChip(_animal.status),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                    '${_animal.raca} • ${_animal.sexo ?? "-"} • ${_animal.idade} anos'
+                    '${_animal.numeroBrinco?.isNotEmpty == true ? " • Brinco ${_animal.numeroBrinco}" : ""}',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _miniStat(Icons.water_drop,
+                        '${nf.format(_totalProduction)} L', AppTheme.blue),
+                    const SizedBox(width: 16),
+                    _miniStat(Icons.speed,
+                        '${nf.format(_averageProduction)} L/dia',
+                        AppTheme.orange),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat(IconData icon, String value, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 4),
+        Text(value,
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+
+  Widget _tabScaffold(
+      {required List items,
+      required Widget list,
+      required String emptyMsg,
+      required IconData emptyIcon,
+      required VoidCallback onAdd,
+      required String addLabel,
+      required Color color}) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: items.isEmpty
+          ? EmptyState(icon: emptyIcon, message: emptyMsg)
+          : RefreshIndicator(onRefresh: _loadData, child: list),
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: onAdd,
+        backgroundColor: color,
+        tooltip: addLabel,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildProductionTab(NumberFormat nf) {
+    return _tabScaffold(
+      items: _history,
+      emptyIcon: Icons.water_drop_outlined,
+      emptyMsg: 'Nenhum registro de produção',
+      color: AppTheme.blue,
+      addLabel: 'Registrar produção',
+      onAdd: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Use a aba Produção no menu principal para lançar a ordenha.')),
+        );
+      },
+      list: ListView.separated(
+        padding: const EdgeInsets.only(bottom: 80),
+        itemCount: _history.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, i) {
+          final p = _history[i];
+          return ListTile(
+            leading: const Icon(Icons.calendar_today,
+                size: 20, color: AppTheme.blue),
+            title: Text(DateFormat('dd/MM/yyyy').format(p.data)),
+            trailing: Text('${nf.format(p.quantidade)} L',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHealthTab() {
+    return _tabScaffold(
+      items: _health,
+      emptyIcon: Icons.health_and_safety_outlined,
+      emptyMsg: 'Nenhum registro de saúde',
+      color: AppTheme.red,
+      addLabel: 'Registrar saúde',
+      onAdd: () => _quickAdd(HealthFormView(animal: _animal)),
+      list: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 80),
+        itemCount: _health.length,
+        itemBuilder: (context, i) {
+          final r = _health[i];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              leading: const Icon(Icons.local_hospital, color: AppTheme.red),
+              title: Text(r.descricao,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                  '${r.tipo} • ${DateFormat('dd/MM/yyyy').format(r.data)}'),
+              trailing: StatusChip(r.status),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildVaccinesTab() {
+    return _tabScaffold(
+      items: _vaccines,
+      emptyIcon: Icons.vaccines_outlined,
+      emptyMsg: 'Nenhuma vacina registrada',
+      color: AppTheme.teal,
+      addLabel: 'Registrar vacina',
+      onAdd: () => _quickAdd(VaccineFormView(animal: _animal)),
+      list: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 80),
+        itemCount: _vaccines.length,
+        itemBuilder: (context, i) {
+          final v = _vaccines[i];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              leading: const Icon(Icons.vaccines, color: AppTheme.teal),
+              title: Text(v.nome,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                  'Aplicada em ${DateFormat('dd/MM/yyyy').format(v.dataAplicacao)}'
+                  '${v.proximaDose != null ? "\nPróxima: ${DateFormat('dd/MM/yyyy').format(v.proximaDose!)}" : ""}'),
+              isThreeLine: v.proximaDose != null,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildReproductionTab() {
+    return _tabScaffold(
+      items: _reproduction,
+      emptyIcon: Icons.favorite_outline,
+      emptyMsg: 'Nenhum registro reprodutivo',
+      color: AppTheme.purple,
+      addLabel: 'Registrar reprodução',
+      onAdd: () => _quickAdd(ReproductionFormView(animal: _animal)),
+      list: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 80),
+        itemCount: _reproduction.length,
+        itemBuilder: (context, i) {
+          final r = _reproduction[i];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              leading: const Icon(Icons.favorite, color: AppTheme.purple),
+              title: Text(r.tipo,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                  '${DateFormat('dd/MM/yyyy').format(r.data)}'
+                  '${r.previsaoParto != null ? "\nPrevisão de parto: ${DateFormat('dd/MM/yyyy').format(r.previsaoParto!)}" : ""}'),
+              isThreeLine: r.previsaoParto != null,
+              trailing: StatusChip(r.status),
+            ),
+          );
+        },
       ),
     );
   }
