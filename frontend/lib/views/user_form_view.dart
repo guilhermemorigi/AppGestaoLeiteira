@@ -152,6 +152,7 @@ class _UserFormViewState extends State<UserFormView> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _role,
                 decoration: const InputDecoration(
                   labelText: 'Perfil de acesso',
@@ -159,8 +160,12 @@ class _UserFormViewState extends State<UserFormView> {
                 ),
                 items: const [
                   DropdownMenuItem(
-                      value: 'ADMIN', child: Text('Administrador')),
-                  DropdownMenuItem(value: 'OPERADOR', child: Text('Operador')),
+                      value: 'ADMIN',
+                      child: Text('Administrador',
+                          overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(
+                      value: 'OPERADOR',
+                      child: Text('Operador', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (v) => setState(() => _role = v!),
               ),

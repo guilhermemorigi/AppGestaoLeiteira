@@ -122,6 +122,7 @@ class _ProductionFormViewState extends State<ProductionFormView> {
                 child: ListView(
                   children: [
                     DropdownButtonFormField<Animal>(
+                      isExpanded: true,
                       value: _selectedAnimal,
                       decoration: const InputDecoration(
                         labelText: 'Selecionar Animal',
@@ -129,8 +130,10 @@ class _ProductionFormViewState extends State<ProductionFormView> {
                         prefixIcon: Icon(Icons.pets),
                       ),
                       items: _animalsAvailable
-                          .map((a) =>
-                              DropdownMenuItem(value: a, child: Text(a.nome)))
+                          .map((a) => DropdownMenuItem(
+                              value: a,
+                              child: Text(a.nome,
+                                  overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (value) =>
                           setState(() => _selectedAnimal = value),
@@ -159,8 +162,11 @@ class _ProductionFormViewState extends State<ProductionFormView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                                DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                            Expanded(
+                                child: Text(
+                                    DateFormat('dd/MM/yyyy')
+                                        .format(_selectedDate),
+                                    overflow: TextOverflow.ellipsis)),
                             const Icon(Icons.arrow_drop_down),
                           ],
                         ),

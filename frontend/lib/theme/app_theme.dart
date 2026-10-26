@@ -225,6 +225,36 @@ class EmptyState extends StatelessWidget {
 }
 
 /// Chip de status colorido.
+/// Indicador de cabeçalho (rótulo + valor) usado no topo das listas.
+/// O valor encolhe (FittedBox) em vez de estourar quando é muito grande.
+class HeaderStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const HeaderStat(this.label, this.value, this.color, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(value,
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        ),
+      ],
+    );
+  }
+}
+
 class StatusChip extends StatelessWidget {
   final String status;
   const StatusChip(this.status, {super.key});
@@ -240,6 +270,8 @@ class StatusChip extends StatelessWidget {
       ),
       child: Text(
         status,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style:
             TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
       ),

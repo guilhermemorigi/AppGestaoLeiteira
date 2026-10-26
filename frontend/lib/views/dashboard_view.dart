@@ -139,7 +139,8 @@ class _DashboardViewState extends State<DashboardView> {
                     final item = details[i];
                     return ListTile(
                       leading: Icon(MdiIcons.cow, color: Colors.blueGrey),
-                      title: Text(item.animalNome),
+                      title: Text(item.animalNome,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
                       trailing: Text(
                         '${numberFormat.format(item.quantidade)} L',
                         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -173,13 +174,14 @@ class _DashboardViewState extends State<DashboardView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Wrap: os filtros descem para a linha de baixo se não couberem
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         _buildFilterButton('7 Dias', '7d'),
-                        const SizedBox(width: 8),
                         _buildFilterButton('30 Dias', '30d'),
-                        const SizedBox(width: 8),
                         _buildFilterButton('Mês Atual', 'mes'),
                       ],
                     ),
@@ -215,10 +217,13 @@ class _DashboardViewState extends State<DashboardView> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Evolução da Produção',
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold)),
+                                const Expanded(
+                                  child: Text('Evolução da Produção',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(width: 8),
                                 Text(
                                   'Média: ${numberFormat.format(_averageProduction)}L',
                                   style: TextStyle(
@@ -304,21 +309,31 @@ class _DashboardViewState extends State<DashboardView> {
         title: const Text('Animal Destaque do Período',
             style: TextStyle(fontSize: 12, color: Colors.grey)),
         subtitle: Text(_topAnimal,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87)),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('${nf.format(_topAnimalQty)} L',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.orange)),
-            const Text('Total', style: TextStyle(fontSize: 10)),
-          ],
+        // Largura máxima + FittedBox: números grandes diminuem em vez de estourar
+        trailing: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 110),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('${nf.format(_topAnimalQty)} L',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.orange)),
+                const Text('Total', style: TextStyle(fontSize: 10)),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -425,15 +440,22 @@ class _DashboardViewState extends State<DashboardView> {
               Icon(icon, color: Colors.white, size: 20),
               const SizedBox(height: 10),
               Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 10,
                       fontWeight: FontWeight.bold)),
-              Text(value,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
+              // Valores grandes encolhem para caber numa linha só
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold)),
+              ),
             ],
           ),
         ),

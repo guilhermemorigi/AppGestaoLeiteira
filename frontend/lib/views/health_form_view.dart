@@ -156,14 +156,17 @@ class _HealthFormViewState extends State<HealthFormView> {
                 child: ListView(
                   children: [
                     DropdownButtonFormField<Animal>(
+                      isExpanded: true,
                       value: _selectedAnimal,
                       decoration: const InputDecoration(
                         labelText: 'Animal',
                         prefixIcon: Icon(Icons.pets),
                       ),
                       items: _animals
-                          .map((a) =>
-                              DropdownMenuItem(value: a, child: Text(a.nome)))
+                          .map((a) => DropdownMenuItem(
+                              value: a,
+                              child: Text(a.nome,
+                                  overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedAnimal = v),
                       validator: (v) =>
@@ -171,14 +174,16 @@ class _HealthFormViewState extends State<HealthFormView> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _tipo,
                       decoration: const InputDecoration(
                         labelText: 'Tipo',
                         prefixIcon: Icon(Icons.local_hospital),
                       ),
                       items: _tipos
-                          .map(
-                              (t) => DropdownMenuItem(value: t, child: Text(t)))
+                          .map((t) => DropdownMenuItem(
+                              value: t,
+                              child: Text(t, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _tipo = v!),
                     ),
@@ -251,14 +256,16 @@ class _HealthFormViewState extends State<HealthFormView> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _status,
                       decoration: const InputDecoration(
                         labelText: 'Status',
                         prefixIcon: Icon(Icons.flag),
                       ),
                       items: const ['Em andamento', 'Concluído']
-                          .map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _status = v!),
                     ),

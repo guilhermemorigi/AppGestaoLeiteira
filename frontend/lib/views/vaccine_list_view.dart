@@ -117,6 +117,8 @@ class _VaccineListViewState extends State<VaccineListView> {
                                         color: AppTheme.teal),
                                   ),
                                   title: Text(v.nome,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   subtitle: Column(
@@ -125,7 +127,9 @@ class _VaccineListViewState extends State<VaccineListView> {
                                     children: [
                                       const SizedBox(height: 2),
                                       Text(
-                                          '${v.animalNome} • Aplicada ${DateFormat('dd/MM/yyyy').format(v.dataAplicacao)}'),
+                                          '${v.animalNome} • Aplicada ${DateFormat('dd/MM/yyyy').format(v.dataAplicacao)}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
                                       if (v.proximaDose != null)
                                         Row(
                                           children: [
@@ -135,16 +139,20 @@ class _VaccineListViewState extends State<VaccineListView> {
                                                     ? AppTheme.orange
                                                     : Colors.grey),
                                             const SizedBox(width: 4),
-                                            Text(
-                                              'Próxima: ${DateFormat('dd/MM/yyyy').format(v.proximaDose!)}',
-                                              style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: proxima
-                                                      ? AppTheme.orange
-                                                      : Colors.grey[700],
-                                                  fontWeight: proxima
-                                                      ? FontWeight.bold
-                                                      : FontWeight.normal),
+                                            Flexible(
+                                              child: Text(
+                                                'Próxima: ${DateFormat('dd/MM/yyyy').format(v.proximaDose!)}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: proxima
+                                                        ? AppTheme.orange
+                                                        : Colors.grey[700],
+                                                    fontWeight: proxima
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal),
+                                              ),
                                             ),
                                           ],
                                         ),

@@ -129,13 +129,16 @@ class _StockFormViewState extends State<StockFormView> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _categoria,
                 decoration: const InputDecoration(
                   labelText: 'Categoria',
                   prefixIcon: Icon(Icons.category),
                 ),
                 items: _categorias
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .map((c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(c, overflow: TextOverflow.ellipsis)))
                     .toList(),
                 onChanged: (v) => setState(() => _categoria = v!),
               ),
@@ -159,11 +162,13 @@ class _StockFormViewState extends State<StockFormView> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _unidade,
                       decoration: const InputDecoration(labelText: 'Unid.'),
                       items: _unidades
-                          .map(
-                              (u) => DropdownMenuItem(value: u, child: Text(u)))
+                          .map((u) => DropdownMenuItem(
+                              value: u,
+                              child: Text(u, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _unidade = v!),
                     ),
@@ -217,9 +222,12 @@ class _StockFormViewState extends State<StockFormView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_validade == null
-                          ? 'Sem validade'
-                          : DateFormat('dd/MM/yyyy').format(_validade!)),
+                      Expanded(
+                          child: Text(
+                              _validade == null
+                                  ? 'Sem validade'
+                                  : DateFormat('dd/MM/yyyy').format(_validade!),
+                              overflow: TextOverflow.ellipsis)),
                       if (_validade != null)
                         IconButton(
                           icon: const Icon(Icons.clear, size: 18),

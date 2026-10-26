@@ -37,56 +37,85 @@ class MoreMenuView extends StatelessWidget {
           AppTheme.orange, UserListView()),
     ];
 
+    // Grade de 2 colunas em que a altura vem do conteúdo (e não de uma
+    // proporção fixa): títulos que quebram linha ou fonte ampliada no
+    // celular não estouram o card. Os dois cards da linha ficam com a
+    // altura do maior.
     return Scaffold(
-      body: GridView.builder(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 0.98,
-        ),
-        itemCount: entries.length,
-        itemBuilder: (context, i) {
-          final e = entries[i];
-          return Card(
-            child: InkWell(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => e.page),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var i = 0; i < entries.length; i += 2)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: e.color.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(e.icon, size: 34, color: e.color),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      e.label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      e.subtitle,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    Expanded(child: _MenuCard(entries[i])),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: i + 1 < entries.length
+                          ? _MenuCard(entries[i + 1])
+                          : const SizedBox.shrink(),
                     ),
                   ],
                 ),
               ),
             ),
-          );
-        },
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuCard extends StatelessWidget {
+  final _MenuEntry entry;
+  const _MenuCard(this.entry);
+
+  @override
+  Widget build(BuildContext context) {
+    final e = entry;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => e.page),
+        ),
+        child: ConstrainedBox(
+          // Mantém o visual "quadrado" quando o conteúdo é pequeno
+          constraints: const BoxConstraints(minHeight: 150),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: e.color.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(e.icon, size: 34, color: e.color),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  e.label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  e.subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

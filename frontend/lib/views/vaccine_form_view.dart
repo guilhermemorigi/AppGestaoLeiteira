@@ -163,14 +163,17 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                 child: ListView(
                   children: [
                     DropdownButtonFormField<Animal>(
+                      isExpanded: true,
                       value: _selectedAnimal,
                       decoration: const InputDecoration(
                         labelText: 'Animal',
                         prefixIcon: Icon(Icons.pets),
                       ),
                       items: _animals
-                          .map((a) =>
-                              DropdownMenuItem(value: a, child: Text(a.nome)))
+                          .map((a) => DropdownMenuItem(
+                              value: a,
+                              child: Text(a.nome,
+                                  overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedAnimal = v),
                       validator: (v) =>
@@ -178,14 +181,16 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _nomeVacina,
                       decoration: const InputDecoration(
                         labelText: 'Vacina',
                         prefixIcon: Icon(Icons.vaccines),
                       ),
                       items: _vacinasComuns
-                          .map(
-                              (v) => DropdownMenuItem(value: v, child: Text(v)))
+                          .map((v) => DropdownMenuItem(
+                              value: v,
+                              child: Text(v, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _nomeVacina = v),
                       validator: (v) => v == null ? 'Selecione a vacina' : null,
@@ -245,10 +250,13 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_proximaDose == null
-                                ? 'Não agendada'
-                                : DateFormat('dd/MM/yyyy')
-                                    .format(_proximaDose!)),
+                            Expanded(
+                                child: Text(
+                                    _proximaDose == null
+                                        ? 'Não agendada'
+                                        : DateFormat('dd/MM/yyyy')
+                                            .format(_proximaDose!),
+                                    overflow: TextOverflow.ellipsis)),
                             if (_proximaDose != null)
                               IconButton(
                                 icon: const Icon(Icons.clear, size: 18),

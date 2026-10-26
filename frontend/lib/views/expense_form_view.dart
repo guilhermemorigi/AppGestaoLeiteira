@@ -114,6 +114,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
           child: ListView(
             children: [
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Categoria',
@@ -121,7 +122,9 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                   prefixIcon: Icon(Icons.category),
                 ),
                 items: _categories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .map((c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(c, overflow: TextOverflow.ellipsis)))
                     .toList(),
                 onChanged: (value) =>
                     setState(() => _selectedCategory = value!),
@@ -179,7 +182,10 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                      Expanded(
+                          child: Text(
+                              DateFormat('dd/MM/yyyy').format(_selectedDate),
+                              overflow: TextOverflow.ellipsis)),
                       const Icon(Icons.arrow_drop_down),
                     ],
                   ),

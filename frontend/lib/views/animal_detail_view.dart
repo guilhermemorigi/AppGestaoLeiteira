@@ -167,6 +167,8 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
                   children: [
                     Expanded(
                       child: Text(_animal.nome,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                               fontSize: 20, fontWeight: FontWeight.bold)),
                     ),
@@ -177,13 +179,17 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
                 Text(
                     '${_animal.raca} • ${_animal.sexo ?? "-"} • ${_animal.idade} anos'
                     '${_animal.numeroBrinco?.isNotEmpty == true ? " • Brinco ${_animal.numeroBrinco}" : ""}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Colors.grey[700], fontSize: 13)),
                 const SizedBox(height: 6),
-                Row(
+                // Wrap: com números grandes o 2º indicador desce de linha
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 4,
                   children: [
                     _miniStat(Icons.water_drop,
                         '${nf.format(_totalProduction)} L', AppTheme.blue),
-                    const SizedBox(width: 16),
                     _miniStat(
                         Icons.speed,
                         '${nf.format(_averageProduction)} L/dia',
@@ -200,12 +206,17 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
 
   Widget _miniStat(IconData icon, String value, Color color) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 4),
-        Text(value,
-            style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+        Flexible(
+          child: Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+        ),
       ],
     );
   }
@@ -278,6 +289,8 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
               onTap: () => _quickAdd(HealthFormView(record: r)),
               leading: const Icon(Icons.local_hospital, color: AppTheme.red),
               title: Text(r.descricao,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text(
                   '${r.tipo} • ${DateFormat('dd/MM/yyyy').format(r.data)}'),
@@ -308,6 +321,8 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
               onTap: () => _quickAdd(VaccineFormView(vaccine: v)),
               leading: const Icon(Icons.vaccines, color: AppTheme.teal),
               title: Text(v.nome,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text(
                   'Aplicada em ${DateFormat('dd/MM/yyyy').format(v.dataAplicacao)}'

@@ -36,6 +36,10 @@ class ApiService {
     return 'http://localhost:8080/api';
   }
 
+  /// Cliente HTTP usado por todas as chamadas. Pode ser substituído nos
+  /// testes (ex.: MockClient do pacote http) para simular o backend.
+  static http.Client client = http.Client();
+
   static const _timeout = Duration(seconds: 15);
   static const _jsonHeaders = {'Content-Type': 'application/json'};
 
@@ -62,18 +66,18 @@ class ApiService {
     return 'Erro inesperado no servidor.';
   }
 
-  Future<dynamic> _get(String path) => _send(http.get(_uri(path)));
+  Future<dynamic> _get(String path) => _send(client.get(_uri(path)));
 
   Future<dynamic> _post(String path, [Object? body]) =>
-      _send(http.post(_uri(path),
+      _send(client.post(_uri(path),
           headers: _jsonHeaders, body: body == null ? null : jsonEncode(body)));
 
   Future<dynamic> _put(String path, Object body) => _send(
-      http.put(_uri(path), headers: _jsonHeaders, body: jsonEncode(body)));
+      client.put(_uri(path), headers: _jsonHeaders, body: jsonEncode(body)));
 
-  Future<dynamic> _patch(String path) => _send(http.patch(_uri(path)));
+  Future<dynamic> _patch(String path) => _send(client.patch(_uri(path)));
 
-  Future<void> _delete(String path) => _send(http.delete(_uri(path)));
+  Future<void> _delete(String path) => _send(client.delete(_uri(path)));
 
   Future<List<T>> _getList<T>(
       String path, T Function(Map<String, dynamic>) fromMap) async {

@@ -85,7 +85,9 @@ class _ProductionListViewState extends State<ProductionListView> {
                         leading:
                             const Icon(Icons.water_drop, color: Colors.blue),
                         title: Text(
-                            '${p.animalNome} - ${numberFormat.format(p.quantidade)} L'),
+                            '${p.animalNome} - ${numberFormat.format(p.quantidade)} L',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis),
                         subtitle: Text(DateFormat('dd/MM/yyyy').format(p.data)),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline,

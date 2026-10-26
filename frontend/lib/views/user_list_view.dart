@@ -91,21 +91,27 @@ class _UserListViewState extends State<UserListView> {
                             u.nomeCompleto?.isNotEmpty == true
                                 ? u.nomeCompleto!
                                 : u.username,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('@${u.username}'),
+                              Text('@${u.username}',
+                                  maxLines: 1, overflow: TextOverflow.ellipsis),
                               if (u.email?.isNotEmpty == true)
                                 Text(u.email!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 12)),
                               const SizedBox(height: 6),
-                              Row(
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
                                 children: [
                                   StatusChip(
                                       isAdmin ? 'Administrador' : 'Operador'),
-                                  const SizedBox(width: 6),
                                   if (!u.ativo)
                                     Container(
                                       padding: const EdgeInsets.symmetric(

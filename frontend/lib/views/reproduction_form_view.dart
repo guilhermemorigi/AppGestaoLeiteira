@@ -162,14 +162,17 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                 child: ListView(
                   children: [
                     DropdownButtonFormField<Animal>(
+                      isExpanded: true,
                       value: _selectedAnimal,
                       decoration: const InputDecoration(
                         labelText: 'Animal (matriz)',
                         prefixIcon: Icon(Icons.pets),
                       ),
                       items: _animals
-                          .map((a) =>
-                              DropdownMenuItem(value: a, child: Text(a.nome)))
+                          .map((a) => DropdownMenuItem(
+                              value: a,
+                              child: Text(a.nome,
+                                  overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedAnimal = v),
                       validator: (v) =>
@@ -177,14 +180,16 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _tipo,
                       decoration: const InputDecoration(
                         labelText: 'Evento',
                         prefixIcon: Icon(Icons.favorite),
                       ),
                       items: _tipos
-                          .map(
-                              (t) => DropdownMenuItem(value: t, child: Text(t)))
+                          .map((t) => DropdownMenuItem(
+                              value: t,
+                              child: Text(t, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) {
                         setState(() => _tipo = v!);
@@ -245,10 +250,13 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(_previsaoParto == null
-                                  ? 'Não definida'
-                                  : DateFormat('dd/MM/yyyy')
-                                      .format(_previsaoParto!)),
+                              Expanded(
+                                  child: Text(
+                                      _previsaoParto == null
+                                          ? 'Não definida'
+                                          : DateFormat('dd/MM/yyyy')
+                                              .format(_previsaoParto!),
+                                      overflow: TextOverflow.ellipsis)),
                               const Icon(Icons.arrow_drop_down),
                             ],
                           ),
@@ -257,14 +265,16 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                     ],
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _status,
                       decoration: const InputDecoration(
                         labelText: 'Status',
                         prefixIcon: Icon(Icons.flag),
                       ),
                       items: _statuses
-                          .map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _status = v!),
                     ),

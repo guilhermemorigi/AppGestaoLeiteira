@@ -79,13 +79,13 @@ class _HealthListViewState extends State<HealthListView> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _stat(
+                        child: HeaderStat(
                             'Em andamento', '$emAndamento', AppTheme.orange),
                       ),
                       Container(width: 1, height: 36, color: Colors.grey[300]),
                       Expanded(
-                        child: _stat('Custo total', currency.format(custoTotal),
-                            AppTheme.red),
+                        child: HeaderStat('Custo total',
+                            currency.format(custoTotal), AppTheme.red),
                       ),
                     ],
                   ),
@@ -119,6 +119,8 @@ class _HealthListViewState extends State<HealthListView> {
                                         color: AppTheme.red),
                                   ),
                                   title: Text(r.descricao,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   subtitle: Column(
@@ -127,10 +129,14 @@ class _HealthListViewState extends State<HealthListView> {
                                     children: [
                                       const SizedBox(height: 2),
                                       Text(
-                                          '${r.animalNome} • ${r.tipo} • ${DateFormat('dd/MM/yyyy').format(r.data)}'),
+                                          '${r.animalNome} • ${r.tipo} • ${DateFormat('dd/MM/yyyy').format(r.data)}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
                                       if (r.medicamento != null &&
                                           r.medicamento!.isNotEmpty)
                                         Text('Med.: ${r.medicamento}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style:
                                                 const TextStyle(fontSize: 12)),
                                       const SizedBox(height: 6),
@@ -157,18 +163,6 @@ class _HealthListViewState extends State<HealthListView> {
         label: const Text('Novo Registro'),
         backgroundColor: AppTheme.red,
       ),
-    );
-  }
-
-  Widget _stat(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-      ],
     );
   }
 

@@ -100,12 +100,12 @@ class _StockListViewState extends State<StockListView> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _headerStat('Valor em estoque',
+                        child: HeaderStat('Valor em estoque',
                             currency.format(valorTotal), AppTheme.primary),
                       ),
                       Container(width: 1, height: 36, color: Colors.grey[300]),
                       Expanded(
-                        child: _headerStat(
+                        child: HeaderStat(
                             'Estoque baixo',
                             '$lowCount ${lowCount == 1 ? "item" : "itens"}',
                             lowCount > 0 ? AppTheme.red : AppTheme.primary),
@@ -164,6 +164,8 @@ class _StockListViewState extends State<StockListView> {
                                     children: [
                                       Expanded(
                                         child: Text(item.nome,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                                 fontWeight: FontWeight.bold)),
                                       ),
@@ -228,18 +230,6 @@ class _StockListViewState extends State<StockListView> {
 
   String _fmt(double v) =>
       v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
-
-  Widget _headerStat(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-      ],
-    );
-  }
 
   void _confirmDelete(StockItem item) {
     showDialog(

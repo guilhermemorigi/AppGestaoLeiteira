@@ -1,6 +1,8 @@
 package com.gestao.leiteira.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -23,6 +25,9 @@ public class StockItem {
 
     private Double quantidadeMinima = 0.0;
 
+    // Dinheiro: NUMERIC(12,2) no banco (exato), Double no Java
+    @JdbcTypeCode(SqlTypes.NUMERIC)
+    @Column(nullable = false, precision = 12, scale = 2)
     private Double precoUnitario = 0.0;
 
     private LocalDateTime validade;

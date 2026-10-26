@@ -2,6 +2,8 @@ package com.gestao.leiteira.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -31,6 +33,9 @@ public class HealthRecord {
 
     private LocalDateTime dataFim;
 
+    // Dinheiro: NUMERIC(12,2) no banco (exato), Double no Java
+    @JdbcTypeCode(SqlTypes.NUMERIC)
+    @Column(nullable = false, precision = 12, scale = 2)
     private Double custo = 0.0;
 
     private String status = "Em andamento"; // Em andamento, Concluído

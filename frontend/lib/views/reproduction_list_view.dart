@@ -83,12 +83,12 @@ class _ReproductionListViewState extends State<ReproductionListView> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _stat(
+                        child: HeaderStat(
                             'Prenhes / Confirmadas', '$prenhes', AppTheme.blue),
                       ),
                       Container(width: 1, height: 36, color: Colors.grey[300]),
                       Expanded(
-                        child: _stat('Partos ≤ 30 dias', '$partosProximos',
+                        child: HeaderStat('Partos ≤ 30 dias', '$partosProximos',
                             AppTheme.purple),
                       ),
                     ],
@@ -125,6 +125,8 @@ class _ReproductionListViewState extends State<ReproductionListView> {
                                       Expanded(
                                         child: Text(
                                             '${r.animalNome} • ${r.tipo}',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                                 fontWeight: FontWeight.bold)),
                                       ),
@@ -141,6 +143,8 @@ class _ReproductionListViewState extends State<ReproductionListView> {
                                       if (r.touro != null &&
                                           r.touro!.isNotEmpty)
                                         Text('Touro/Sêmen: ${r.touro}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style:
                                                 const TextStyle(fontSize: 12)),
                                       if (r.previsaoParto != null)
@@ -173,20 +177,6 @@ class _ReproductionListViewState extends State<ReproductionListView> {
         label: const Text('Novo Registro'),
         backgroundColor: AppTheme.purple,
       ),
-    );
-  }
-
-  Widget _stat(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-      ],
     );
   }
 

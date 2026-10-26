@@ -77,14 +77,24 @@ class _ExpenseListViewState extends State<ExpenseListView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total de Gastos:',
-                          style: TextStyle(fontSize: 18)),
-                      Text(
-                        currencyFormat.format(_total),
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red),
+                      const Flexible(
+                        child: Text('Total de Gastos:',
+                            style: TextStyle(fontSize: 18)),
+                      ),
+                      const SizedBox(width: 12),
+                      // Totais grandes encolhem em vez de empurrar o rótulo
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            currencyFormat.format(_total),
+                            style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -108,17 +118,29 @@ class _ExpenseListViewState extends State<ExpenseListView> {
                                           : Icons.money_off,
                                       color: Colors.red),
                                 ),
-                                title: Text(ex.descricao),
+                                title: Text(ex.descricao,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis),
                                 subtitle: Text(
                                     '${ex.categoria} | ${DateFormat('dd/MM/yyyy').format(ex.data)}'
-                                    '${ex.automatica ? ' | automático' : ''}'),
+                                    '${ex.automatica ? ' | automático' : ''}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      currencyFormat.format(ex.valor),
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
+                                    // Valor com largura máxima: encolhe se for muito grande
+                                    ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 110),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          currencyFormat.format(ex.valor),
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
                                     if (!ex.automatica)

@@ -123,7 +123,10 @@ class _ReminderFormViewState extends State<ReminderFormView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                      Expanded(
+                          child: Text(
+                              DateFormat('dd/MM/yyyy').format(_selectedDate),
+                              overflow: TextOverflow.ellipsis)),
                       const Icon(Icons.arrow_drop_down),
                     ],
                   ),

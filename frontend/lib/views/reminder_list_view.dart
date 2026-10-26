@@ -96,6 +96,8 @@ class _ReminderListViewState extends State<ReminderListView> {
                           ),
                           title: Text(
                             r.titulo,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isOverdue ? Colors.red : null,
@@ -107,7 +109,8 @@ class _ReminderListViewState extends State<ReminderListView> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(r.descricao),
+                              Text(r.descricao,
+                                  maxLines: 3, overflow: TextOverflow.ellipsis),
                               Text(
                                 'Data: ${DateFormat('dd/MM/yyyy').format(r.data)}',
                                 style: TextStyle(

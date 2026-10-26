@@ -157,14 +157,17 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
+                            isExpanded: true,
                             value: _sexo,
                             decoration: const InputDecoration(
                               labelText: 'Sexo',
                               prefixIcon: Icon(Icons.wc),
                             ),
                             items: const ['Fêmea', 'Macho']
-                                .map((s) =>
-                                    DropdownMenuItem(value: s, child: Text(s)))
+                                .map((s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s,
+                                        overflow: TextOverflow.ellipsis)))
                                 .toList(),
                             onChanged: (v) => setState(() => _sexo = v!),
                           ),
@@ -185,14 +188,16 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _status,
                       decoration: const InputDecoration(
                         labelText: 'Situação',
                         prefixIcon: Icon(Icons.flag),
                       ),
                       items: _statuses
-                          .map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _status = v!),
                     ),
@@ -217,10 +222,13 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_dataNascimento == null
-                                ? 'Não informada'
-                                : DateFormat('dd/MM/yyyy')
-                                    .format(_dataNascimento!)),
+                            Expanded(
+                                child: Text(
+                                    _dataNascimento == null
+                                        ? 'Não informada'
+                                        : DateFormat('dd/MM/yyyy')
+                                            .format(_dataNascimento!),
+                                    overflow: TextOverflow.ellipsis)),
                             const Icon(Icons.arrow_drop_down),
                           ],
                         ),
