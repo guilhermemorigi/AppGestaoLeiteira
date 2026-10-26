@@ -1,47 +1,51 @@
 package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.Reminder;
-import com.gestao.leiteira.repository.ReminderRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.gestao.leiteira.service.ReminderService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/reminders")
-@CrossOrigin(origins = "*")
 public class ReminderController {
 
-    @Autowired
-    private ReminderRepository repository;
+    private final ReminderService service;
+
+    public ReminderController(ReminderService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<Reminder> getAll() {
-        return repository.findAll();
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Reminder getById(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Reminder create(@RequestBody Reminder reminder) {
-        return repository.save(reminder);
+        return service.create(reminder);
+    }
+
+    @PutMapping("/{id}")
+    public Reminder update(@PathVariable Long id, @RequestBody Reminder reminder) {
+        return service.update(id, reminder);
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Reminder> updateStatus(@PathVariable Long id, @RequestParam Boolean concluido) {
-        return repository.findById(id)
-                .map(reminder -> {
-                    reminder.setConcluido(concluido);
-                    return ResponseEntity.ok(repository.save(reminder));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public Reminder updateStatus(@PathVariable Long id, @RequestParam boolean concluido) {
+        return service.updateStatus(id, concluido);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

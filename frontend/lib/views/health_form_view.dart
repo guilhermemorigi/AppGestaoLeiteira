@@ -6,7 +6,8 @@ import '../theme/app_theme.dart';
 
 class HealthFormView extends StatefulWidget {
   final Animal? animal; // pré-selecionado ao vir da ficha do animal
-  const HealthFormView({super.key, this.animal});
+  final HealthRecord? record; // se informado, edição
+  const HealthFormView({super.key, this.animal, this.record});
 
   @override
   State<HealthFormView> createState() => _HealthFormViewState();
@@ -37,9 +38,23 @@ class _HealthFormViewState extends State<HealthFormView> {
     'Vermífugo',
   ];
 
+  bool get _isEdit => widget.record != null;
+
   @override
   void initState() {
     super.initState();
+    final r = widget.record;
+    if (r != null) {
+      _descricaoController.text = r.descricao;
+      _medicamentoController.text = r.medicamento ?? '';
+      _veterinarioController.text = r.veterinario ?? '';
+      _custoController.text =
+          r.custo > 0 ? r.custo.toStringAsFixed(2).replaceAll('.', ',') : '';
+      _obsController.text = r.observacao ?? '';
+      _tipo = _tipos.contains(r.tipo) ? r.tipo : _tipo;
+      _status = r.status;
+      _data = r.data;
+    }
     _loadAnimals();
   }
 
@@ -56,21 +71,21 @@ class _HealthFormViewState extends State<HealthFormView> {
   Future<void> _loadAnimals() async {
     try {
       final animals = await _apiService.getAllAnimals();
+      final preSelecionado = widget.record?.animalId ?? widget.animal?.id;
+      if (!mounted) return;
       setState(() {
         _animals = animals;
-        if (widget.animal != null) {
-          _selectedAnimal = animals.firstWhere(
-            (a) => a.id == widget.animal!.id,
-            orElse: () => widget.animal!,
-          );
-        }
+        _selectedAnimal =
+            animals.where((a) => a.id == preSelecionado).firstOrNull;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao carregar animais.')),
+          SnackBar(
+              content: Text(
+                  describeError(e, fallback: 'Erro ao carregar animais.'))),
         );
       }
     }
@@ -98,6 +113,7 @@ class _HealthFormViewState extends State<HealthFormView> {
           ? null
           : _veterinarioController.text.trim(),
       data: _data,
+      dataFim: widget.record?.dataFim,
       custo: double.tryParse(_custoController.text.replaceAll(',', '.')) ?? 0,
       status: _status,
       observacao: _obsController.text.trim().isEmpty
@@ -106,13 +122,19 @@ class _HealthFormViewState extends State<HealthFormView> {
     );
 
     try {
-      await _apiService.createHealth(record);
+      if (_isEdit) {
+        await _apiService.updateHealth(widget.record!.id!, record);
+      } else {
+        await _apiService.createHealth(record);
+      }
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao salvar. Verifique a conexão.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao salvar. Verifique a conexão.'))),
         );
       }
     }
@@ -121,7 +143,10 @@ class _HealthFormViewState extends State<HealthFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Registrar Saúde/Tratamento'),
+      appBar: CustomAppBar(
+          title: _isEdit
+              ? 'Editar Saúde/Tratamento'
+              : 'Registrar Saúde/Tratamento'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -137,11 +162,12 @@ class _HealthFormViewState extends State<HealthFormView> {
                         prefixIcon: Icon(Icons.pets),
                       ),
                       items: _animals
-                          .map((a) => DropdownMenuItem(
-                              value: a, child: Text(a.nome)))
+                          .map((a) =>
+                              DropdownMenuItem(value: a, child: Text(a.nome)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedAnimal = v),
-                      validator: (v) => v == null ? 'Selecione um animal' : null,
+                      validator: (v) =>
+                          v == null ? 'Selecione um animal' : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -151,8 +177,8 @@ class _HealthFormViewState extends State<HealthFormView> {
                         prefixIcon: Icon(Icons.local_hospital),
                       ),
                       items: _tipos
-                          .map((t) =>
-                              DropdownMenuItem(value: t, child: Text(t)))
+                          .map(
+                              (t) => DropdownMenuItem(value: t, child: Text(t)))
                           .toList(),
                       onChanged: (v) => setState(() => _tipo = v!),
                     ),
@@ -203,8 +229,8 @@ class _HealthFormViewState extends State<HealthFormView> {
                                 labelText: 'Data',
                                 prefixIcon: Icon(Icons.calendar_today),
                               ),
-                              child: Text(
-                                  DateFormat('dd/MM/yyyy').format(_data)),
+                              child:
+                                  Text(DateFormat('dd/MM/yyyy').format(_data)),
                             ),
                           ),
                         ),
@@ -215,6 +241,7 @@ class _HealthFormViewState extends State<HealthFormView> {
                             decoration: const InputDecoration(
                               labelText: 'Custo (R\$)',
                               prefixIcon: Icon(Icons.attach_money),
+                              helperText: 'Gera despesa em Financeiro',
                             ),
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
@@ -230,8 +257,8 @@ class _HealthFormViewState extends State<HealthFormView> {
                         prefixIcon: Icon(Icons.flag),
                       ),
                       items: const ['Em andamento', 'Concluído']
-                          .map((s) =>
-                              DropdownMenuItem(value: s, child: Text(s)))
+                          .map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (v) => setState(() => _status = v!),
                     ),

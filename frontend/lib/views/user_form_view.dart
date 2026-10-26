@@ -73,12 +73,11 @@ class _UserFormViewState extends State<UserFormView> {
         await _apiService.createUser(user);
       }
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Erro ao salvar. Usuário pode já existir.')),
+          SnackBar(content: Text(describeError(e))),
         );
       }
     }
@@ -134,9 +133,8 @@ class _UserFormViewState extends State<UserFormView> {
                 controller: _passwordController,
                 obscureText: _isObscure,
                 decoration: InputDecoration(
-                  labelText: _isEdit
-                      ? 'Nova senha (deixe vazio p/ manter)'
-                      : 'Senha',
+                  labelText:
+                      _isEdit ? 'Nova senha (deixe vazio p/ manter)' : 'Senha',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -162,8 +160,7 @@ class _UserFormViewState extends State<UserFormView> {
                 items: const [
                   DropdownMenuItem(
                       value: 'ADMIN', child: Text('Administrador')),
-                  DropdownMenuItem(
-                      value: 'OPERADOR', child: Text('Operador')),
+                  DropdownMenuItem(value: 'OPERADOR', child: Text('Operador')),
                 ],
                 onChanged: (v) => setState(() => _role = v!),
               ),
@@ -183,7 +180,8 @@ class _UserFormViewState extends State<UserFormView> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.save),
-                label: Text(_isEdit ? 'Salvar Alterações' : 'Cadastrar Usuário'),
+                label:
+                    Text(_isEdit ? 'Salvar Alterações' : 'Cadastrar Usuário'),
               ),
             ],
           ),

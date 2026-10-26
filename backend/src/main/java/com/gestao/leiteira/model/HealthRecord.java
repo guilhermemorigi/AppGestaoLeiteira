@@ -1,6 +1,6 @@
 package com.gestao.leiteira.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -26,11 +26,9 @@ public class HealthRecord {
 
     private String veterinario;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     @Column(nullable = false)
     private LocalDateTime data;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime dataFim;
 
     private Double custo = 0.0;
@@ -38,6 +36,12 @@ public class HealthRecord {
     private String status = "Em andamento"; // Em andamento, Concluído
 
     private String observacao;
+
+    /** Despesa gerada automaticamente a partir do custo do registro. */
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "expense_id")
+    @JsonIgnore
+    private Expense despesa;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -71,4 +75,7 @@ public class HealthRecord {
 
     public String getObservacao() { return observacao; }
     public void setObservacao(String observacao) { this.observacao = observacao; }
+
+    public Expense getDespesa() { return despesa; }
+    public void setDespesa(Expense despesa) { this.despesa = despesa; }
 }

@@ -5,7 +5,9 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
 class ProductionFormView extends StatefulWidget {
-  const ProductionFormView({super.key});
+  final Production? production; // se informado, edição
+  final Animal? animal; // pré-selecionado ao vir da ficha do animal
+  const ProductionFormView({super.key, this.production, this.animal});
 
   @override
   State<ProductionFormView> createState() => _ProductionFormViewState();
@@ -21,9 +23,16 @@ class _ProductionFormViewState extends State<ProductionFormView> {
   bool _isLoading = true;
   bool _isSaving = false;
 
+  bool get _isEdit => widget.production != null;
+
   @override
   void initState() {
     super.initState();
+    final p = widget.production;
+    if (p != null) {
+      _selectedDate = p.data;
+      _quantidadeController.text = p.quantidade.toString().replaceAll('.', ',');
+    }
     _loadAnimals();
   }
 
@@ -36,16 +45,21 @@ class _ProductionFormViewState extends State<ProductionFormView> {
   Future<void> _loadAnimals() async {
     try {
       final animals = await _apiService.getAllAnimals();
+      final preSelecionado = widget.production?.animalId ?? widget.animal?.id;
+      if (!mounted) return;
       setState(() {
         _animalsAvailable = animals;
+        _selectedAnimal =
+            animals.where((a) => a.id == preSelecionado).firstOrNull;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Erro ao carregar animais do servidor.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao carregar animais do servidor.'))),
         );
       }
     }
@@ -70,17 +84,24 @@ class _ProductionFormViewState extends State<ProductionFormView> {
       );
 
       try {
-        await _apiService.createProduction(production);
+        if (_isEdit) {
+          await _apiService.updateProduction(
+              widget.production!.id!, production);
+        } else {
+          await _apiService.createProduction(production);
+        }
         if (mounted) {
           setState(() => _isSaving = false);
           Navigator.pop(context, true);
         }
-      } catch (_) {
+      } catch (e) {
         if (mounted) {
           setState(() => _isSaving = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Erro ao salvar produção. Verifique a conexão.')),
+            SnackBar(
+                content: Text(describeError(e,
+                    fallback:
+                        'Erro ao salvar produção. Verifique a conexão.'))),
           );
         }
       }
@@ -90,7 +111,8 @@ class _ProductionFormViewState extends State<ProductionFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Registrar Produção'),
+      appBar: CustomAppBar(
+          title: _isEdit ? 'Editar Produção' : 'Registrar Produção'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -100,6 +122,7 @@ class _ProductionFormViewState extends State<ProductionFormView> {
                 child: ListView(
                   children: [
                     DropdownButtonFormField<Animal>(
+                      value: _selectedAnimal,
                       decoration: const InputDecoration(
                         labelText: 'Selecionar Animal',
                         border: OutlineInputBorder(),
@@ -123,8 +146,9 @@ class _ProductionFormViewState extends State<ProductionFormView> {
                           firstDate: DateTime(2020),
                           lastDate: DateTime.now(),
                         );
-                        if (picked != null)
+                        if (picked != null) {
                           setState(() => _selectedDate = picked);
+                        }
                       },
                       child: InputDecorator(
                         decoration: const InputDecoration(
@@ -154,8 +178,9 @@ class _ProductionFormViewState extends State<ProductionFormView> {
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Campo obrigatório';
+                        }
                         final parsed =
                             double.tryParse(value.replaceAll(',', '.'));
                         if (parsed == null) return 'Valor inválido';

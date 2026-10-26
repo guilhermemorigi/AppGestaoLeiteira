@@ -6,7 +6,8 @@ import '../theme/app_theme.dart';
 
 class VaccineFormView extends StatefulWidget {
   final Animal? animal;
-  const VaccineFormView({super.key, this.animal});
+  final Vaccine? vaccine; // se informado, edição
+  const VaccineFormView({super.key, this.animal, this.vaccine});
 
   @override
   State<VaccineFormView> createState() => _VaccineFormViewState();
@@ -39,9 +40,25 @@ class _VaccineFormViewState extends State<VaccineFormView> {
     'Outra',
   ];
 
+  bool get _isEdit => widget.vaccine != null;
+
   @override
   void initState() {
     super.initState();
+    final v = widget.vaccine;
+    if (v != null) {
+      if (_vacinasComuns.contains(v.nome)) {
+        _nomeVacina = v.nome;
+      } else {
+        _nomeVacina = 'Outra';
+        _outraVacinaController.text = v.nome;
+      }
+      _dataAplicacao = v.dataAplicacao;
+      _proximaDose = v.proximaDose;
+      _loteController.text = v.lote ?? '';
+      _veterinarioController.text = v.veterinario ?? '';
+      _obsController.text = v.observacao ?? '';
+    }
     _loadAnimals();
   }
 
@@ -57,21 +74,21 @@ class _VaccineFormViewState extends State<VaccineFormView> {
   Future<void> _loadAnimals() async {
     try {
       final animals = await _apiService.getAllAnimals();
+      final preSelecionado = widget.vaccine?.animalId ?? widget.animal?.id;
+      if (!mounted) return;
       setState(() {
         _animals = animals;
-        if (widget.animal != null) {
-          _selectedAnimal = animals.firstWhere(
-            (a) => a.id == widget.animal!.id,
-            orElse: () => widget.animal!,
-          );
-        }
+        _selectedAnimal =
+            animals.where((a) => a.id == preSelecionado).firstOrNull;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao carregar animais.')),
+          SnackBar(
+              content: Text(
+                  describeError(e, fallback: 'Erro ao carregar animais.'))),
         );
       }
     }
@@ -114,13 +131,19 @@ class _VaccineFormViewState extends State<VaccineFormView> {
     );
 
     try {
-      await _apiService.createVaccine(vaccine);
+      if (_isEdit) {
+        await _apiService.updateVaccine(widget.vaccine!.id!, vaccine);
+      } else {
+        await _apiService.createVaccine(vaccine);
+      }
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao salvar. Verifique a conexão.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao salvar. Verifique a conexão.'))),
         );
       }
     }
@@ -129,7 +152,8 @@ class _VaccineFormViewState extends State<VaccineFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Registrar Vacina'),
+      appBar:
+          CustomAppBar(title: _isEdit ? 'Editar Vacina' : 'Registrar Vacina'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -145,11 +169,12 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                         prefixIcon: Icon(Icons.pets),
                       ),
                       items: _animals
-                          .map((a) => DropdownMenuItem(
-                              value: a, child: Text(a.nome)))
+                          .map((a) =>
+                              DropdownMenuItem(value: a, child: Text(a.nome)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedAnimal = v),
-                      validator: (v) => v == null ? 'Selecione um animal' : null,
+                      validator: (v) =>
+                          v == null ? 'Selecione um animal' : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -159,8 +184,8 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                         prefixIcon: Icon(Icons.vaccines),
                       ),
                       items: _vacinasComuns
-                          .map((v) =>
-                              DropdownMenuItem(value: v, child: Text(v)))
+                          .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)))
                           .toList(),
                       onChanged: (v) => setState(() => _nomeVacina = v),
                       validator: (v) => v == null ? 'Selecione a vacina' : null,
@@ -202,9 +227,9 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                       onTap: () async {
                         final picked = await showDatePicker(
                           context: context,
-                          initialDate:
-                              _proximaDose ?? DateTime.now().add(const Duration(days: 180)),
-                          firstDate: DateTime.now(),
+                          initialDate: _proximaDose ??
+                              DateTime.now().add(const Duration(days: 180)),
+                          firstDate: _dataAplicacao,
                           lastDate: DateTime(2035),
                         );
                         if (picked != null) {
@@ -215,6 +240,7 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                         decoration: const InputDecoration(
                           labelText: 'Próxima dose (opcional)',
                           prefixIcon: Icon(Icons.event_repeat),
+                          helperText: 'Cria um lembrete na Agenda',
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,

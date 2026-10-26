@@ -1,52 +1,51 @@
 package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.HealthRecord;
-import com.gestao.leiteira.repository.HealthRecordRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.gestao.leiteira.service.HealthRecordService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/health")
-@CrossOrigin(origins = "*")
 public class HealthRecordController {
 
-    @Autowired
-    private HealthRecordRepository repository;
+    private final HealthRecordService service;
+
+    public HealthRecordController(HealthRecordService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<HealthRecord> getAll() {
-        return repository.findAllByOrderByDataDesc();
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public HealthRecord getById(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @GetMapping("/animal/{animalId}")
     public List<HealthRecord> getByAnimal(@PathVariable Long animalId) {
-        return repository.findByAnimalIdOrderByDataDesc(animalId);
+        return service.findByAnimal(animalId);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public HealthRecord create(@RequestBody HealthRecord record) {
-        return repository.save(record);
+        return service.create(record);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<HealthRecord> update(@PathVariable Long id, @RequestBody HealthRecord record) {
-        return repository.findById(id)
-                .map(existing -> {
-                    record.setId(id);
-                    return ResponseEntity.ok(repository.save(record));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public HealthRecord update(@PathVariable Long id, @RequestBody HealthRecord record) {
+        return service.update(id, record);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

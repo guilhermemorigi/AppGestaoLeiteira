@@ -34,13 +34,32 @@ class _ExpenseListViewState extends State<ExpenseListView> {
         _total = data.fold(0.0, (sum, e) => sum + e.valor);
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
     }
+  }
+
+  Future<void> _openForm([Expense? expense]) async {
+    if (expense != null && expense.automatica) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Gasto gerado por um registro de saúde. '
+                'Altere o custo em Saúde & Tratamentos.')),
+      );
+      return;
+    }
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (context) => ExpenseFormView(expense: expense)),
+    );
+    if (result == true) _refreshData();
   }
 
   @override
@@ -80,14 +99,19 @@ class _ExpenseListViewState extends State<ExpenseListView> {
                             itemBuilder: (context, index) {
                               final ex = _expenses[index];
                               return ListTile(
+                                onTap: () => _openForm(ex),
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.red[100],
-                                  child: const Icon(Icons.money_off,
+                                  child: Icon(
+                                      ex.automatica
+                                          ? Icons.health_and_safety
+                                          : Icons.money_off,
                                       color: Colors.red),
                                 ),
                                 title: Text(ex.descricao),
                                 subtitle: Text(
-                                    '${ex.categoria} | ${DateFormat('dd/MM/yyyy').format(ex.data)}'),
+                                    '${ex.categoria} | ${DateFormat('dd/MM/yyyy').format(ex.data)}'
+                                    '${ex.automatica ? ' | automático' : ''}'),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -97,11 +121,14 @@ class _ExpenseListViewState extends State<ExpenseListView> {
                                           fontWeight: FontWeight.bold),
                                     ),
                                     const SizedBox(width: 8),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline,
-                                          color: Colors.red, size: 20),
-                                      onPressed: () => _confirmDelete(ex),
-                                    ),
+                                    if (!ex.automatica)
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline,
+                                            color: Colors.red, size: 20),
+                                        onPressed: () => _confirmDelete(ex),
+                                      )
+                                    else
+                                      const SizedBox(width: 48),
                                   ],
                                 ),
                               );
@@ -112,13 +139,7 @@ class _ExpenseListViewState extends State<ExpenseListView> {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ExpenseFormView()),
-          );
-          if (result == true) _refreshData();
-        },
+        onPressed: () => _openForm(),
         label: const Text('Novo Gasto'),
         icon: const Icon(Icons.add),
         backgroundColor: Colors.red[400],
@@ -130,24 +151,26 @@ class _ExpenseListViewState extends State<ExpenseListView> {
   void _confirmDelete(Expense ex) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Excluir Gasto'),
         content: Text('Deseja realmente excluir o gasto "${ex.descricao}"?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancelar')),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               try {
                 await _apiService.deleteExpense(ex.id!);
                 _refreshData();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Erro ao excluir. Verifique a conexão.')),
+                    SnackBar(
+                        content: Text(describeError(e,
+                            fallback:
+                                'Erro ao excluir. Verifique a conexão.'))),
                   );
                 }
               }

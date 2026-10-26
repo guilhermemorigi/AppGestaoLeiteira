@@ -31,24 +31,22 @@ class _SignupViewState extends State<SignupView> {
       setState(() => _isLoading = true);
 
       final user = User(
-        username: _usernameController.text,
+        username: _usernameController.text.trim(),
         password: _passwordController.text,
       );
 
       try {
-        await _apiService.createUser(user);
+        await _apiService.signup(user);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Usuário cadastrado com sucesso!')),
           );
           Navigator.pop(context);
         }
-      } catch (_) {
+      } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text(
-                    'Erro ao cadastrar. Usuário já existe ou servidor indisponível.')),
+            SnackBar(content: Text(describeError(e))),
           );
         }
       } finally {

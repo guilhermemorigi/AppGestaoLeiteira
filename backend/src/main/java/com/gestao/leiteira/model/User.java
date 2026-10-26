@@ -1,5 +1,6 @@
 package com.gestao.leiteira.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
@@ -13,6 +14,8 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
+    // Armazenada como hash; nunca é devolvida nas respostas da API
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
 

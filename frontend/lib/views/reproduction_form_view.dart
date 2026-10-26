@@ -6,7 +6,8 @@ import '../theme/app_theme.dart';
 
 class ReproductionFormView extends StatefulWidget {
   final Animal? animal;
-  const ReproductionFormView({super.key, this.animal});
+  final Reproduction? record; // se informado, edição
+  const ReproductionFormView({super.key, this.animal, this.record});
 
   @override
   State<ReproductionFormView> createState() => _ReproductionFormViewState();
@@ -45,9 +46,20 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
     'Parida',
   ];
 
+  bool get _isEdit => widget.record != null;
+
   @override
   void initState() {
     super.initState();
+    final r = widget.record;
+    if (r != null) {
+      _tipo = _tipos.contains(r.tipo) ? r.tipo : _tipo;
+      _status = _statuses.contains(r.status) ? r.status : _status;
+      _data = r.data;
+      _previsaoParto = r.previsaoParto;
+      _touroController.text = r.touro ?? '';
+      _obsController.text = r.observacao ?? '';
+    }
     _loadAnimals();
   }
 
@@ -61,21 +73,21 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
   Future<void> _loadAnimals() async {
     try {
       final animals = await _apiService.getAllAnimals();
+      final preSelecionado = widget.record?.animalId ?? widget.animal?.id;
+      if (!mounted) return;
       setState(() {
         _animals = animals;
-        if (widget.animal != null) {
-          _selectedAnimal = animals.firstWhere(
-            (a) => a.id == widget.animal!.id,
-            orElse: () => widget.animal!,
-          );
-        }
+        _selectedAnimal =
+            animals.where((a) => a.id == preSelecionado).firstOrNull;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao carregar animais.')),
+          SnackBar(
+              content: Text(
+                  describeError(e, fallback: 'Erro ao carregar animais.'))),
         );
       }
     }
@@ -116,13 +128,19 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
     );
 
     try {
-      await _apiService.createReproduction(r);
+      if (_isEdit) {
+        await _apiService.updateReproduction(widget.record!.id!, r);
+      } else {
+        await _apiService.createReproduction(r);
+      }
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao salvar. Verifique a conexão.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao salvar. Verifique a conexão.'))),
         );
       }
     }
@@ -133,7 +151,8 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
     final mostrarTouro = _tipo == 'Cobertura' || _tipo == 'Inseminação';
 
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Registrar Reprodução'),
+      appBar: CustomAppBar(
+          title: _isEdit ? 'Editar Reprodução' : 'Registrar Reprodução'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -149,11 +168,12 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                         prefixIcon: Icon(Icons.pets),
                       ),
                       items: _animals
-                          .map((a) => DropdownMenuItem(
-                              value: a, child: Text(a.nome)))
+                          .map((a) =>
+                              DropdownMenuItem(value: a, child: Text(a.nome)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedAnimal = v),
-                      validator: (v) => v == null ? 'Selecione um animal' : null,
+                      validator: (v) =>
+                          v == null ? 'Selecione um animal' : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -163,8 +183,8 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                         prefixIcon: Icon(Icons.favorite),
                       ),
                       items: _tipos
-                          .map((t) =>
-                              DropdownMenuItem(value: t, child: Text(t)))
+                          .map(
+                              (t) => DropdownMenuItem(value: t, child: Text(t)))
                           .toList(),
                       onChanged: (v) {
                         setState(() => _tipo = v!);
@@ -243,8 +263,8 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                         prefixIcon: Icon(Icons.flag),
                       ),
                       items: _statuses
-                          .map((s) =>
-                              DropdownMenuItem(value: s, child: Text(s)))
+                          .map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (v) => setState(() => _status = v!),
                     ),

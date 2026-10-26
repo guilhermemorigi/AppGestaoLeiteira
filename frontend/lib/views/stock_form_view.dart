@@ -95,11 +95,13 @@ class _StockFormViewState extends State<StockFormView> {
         await _apiService.createStock(item);
       }
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao salvar. Verifique a conexão.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao salvar. Verifique a conexão.'))),
         );
       }
     }
@@ -108,7 +110,8 @@ class _StockFormViewState extends State<StockFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(title: _isEdit ? 'Editar Item' : 'Novo Item de Estoque'),
+      appBar:
+          CustomAppBar(title: _isEdit ? 'Editar Item' : 'Novo Item de Estoque'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -121,7 +124,8 @@ class _StockFormViewState extends State<StockFormView> {
                   labelText: 'Nome do item',
                   prefixIcon: Icon(Icons.inventory_2),
                 ),
-                validator: (v) => v!.trim().isEmpty ? 'Campo obrigatório' : null,
+                validator: (v) =>
+                    v!.trim().isEmpty ? 'Campo obrigatório' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
@@ -158,8 +162,8 @@ class _StockFormViewState extends State<StockFormView> {
                       value: _unidade,
                       decoration: const InputDecoration(labelText: 'Unid.'),
                       items: _unidades
-                          .map((u) =>
-                              DropdownMenuItem(value: u, child: Text(u)))
+                          .map(
+                              (u) => DropdownMenuItem(value: u, child: Text(u)))
                           .toList(),
                       onChanged: (v) => setState(() => _unidade = v!),
                     ),

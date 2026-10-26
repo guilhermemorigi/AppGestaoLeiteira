@@ -23,28 +23,22 @@ class _LoginViewState extends State<LoginView> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        final user = await _apiService.login(
-          _usernameController.text,
+        await _apiService.login(
+          _usernameController.text.trim(),
           _passwordController.text,
         );
         if (mounted) {
           setState(() => _isLoading = false);
-          if (user != null) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MainNavigation()),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Usuário ou senha incorretos')),
-            );
-          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigation()),
+          );
         }
-      } catch (_) {
+      } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+            SnackBar(content: Text(describeError(e))),
           );
         }
       }

@@ -1,7 +1,27 @@
+import 'package:intl/intl.dart';
+
+// Formato de data aceito/gerado pelo backend (LocalDateTime em ISO 8601)
+final _apiDateFormat = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+String _toApiDate(DateTime date) => _apiDateFormat.format(date);
+String? _toApiDateOrNull(DateTime? date) =>
+    date == null ? null : _apiDateFormat.format(date);
+DateTime? _parseDateOrNull(dynamic value) =>
+    value == null ? null : DateTime.tryParse(value as String);
+
+/// Referência ao animal no formato esperado pela API: {"animal": {"id": X}}
+Map<String, dynamic> _animalRef(int animalId) => {'id': animalId};
+
+int _animalIdFrom(Map<String, dynamic> map) =>
+    (map['animal'] as Map<String, dynamic>?)?['id'] ?? 0;
+
+String _animalNomeFrom(Map<String, dynamic> map) =>
+    (map['animal'] as Map<String, dynamic>?)?['nome'] ?? 'Desconhecido';
+
 class User {
   final int? id;
   final String username;
-  final String password;
+  final String password; // nunca retornada pela API; usada apenas no envio
   final String? nomeCompleto;
   final String? email;
   final String? telefone;
@@ -11,7 +31,7 @@ class User {
   User({
     this.id,
     required this.username,
-    required this.password,
+    this.password = '',
     this.nomeCompleto,
     this.email,
     this.telefone,
@@ -19,9 +39,8 @@ class User {
     this.ativo = true,
   });
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'username': username,
       'password': password,
       'nomeCompleto': nomeCompleto,
@@ -36,12 +55,11 @@ class User {
     return User(
       id: map['id'],
       username: map['username'] ?? '',
-      password: map['password'] ?? '',
       nomeCompleto: map['nomeCompleto'],
       email: map['email'],
       telefone: map['telefone'],
       role: map['role'] ?? 'OPERADOR',
-      ativo: map['ativo'] == null ? true : (map['ativo'] == true || map['ativo'] == 1),
+      ativo: map['ativo'] ?? true,
     );
   }
 }
@@ -69,16 +87,15 @@ class Animal {
     this.status = 'Ativo',
   });
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'nome': nome,
       'idade': idade,
       'raca': raca,
       'numeroBrinco': numeroBrinco,
       'sexo': sexo,
       'peso': peso,
-      'dataNascimento': dataNascimento?.toIso8601String(),
+      'dataNascimento': _toApiDateOrNull(dataNascimento),
       'status': status,
     };
   }
@@ -92,9 +109,7 @@ class Animal {
       numeroBrinco: map['numeroBrinco'],
       sexo: map['sexo'],
       peso: (map['peso'] as num?)?.toDouble(),
-      dataNascimento: map['dataNascimento'] != null
-          ? DateTime.tryParse(map['dataNascimento'])
-          : null,
+      dataNascimento: _parseDateOrNull(map['dataNascimento']),
       status: map['status'] ?? 'Ativo',
     );
   }
@@ -115,22 +130,19 @@ class Production {
     required this.quantidade,
   });
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'animal_id': animalId,
-      'data': data.toIso8601String(),
+      'animal': _animalRef(animalId),
+      'data': _toApiDate(data),
       'quantidade': quantidade,
     };
   }
 
-  factory Production.fromMap(Map<String, dynamic> map, {String? animalNome}) {
+  factory Production.fromMap(Map<String, dynamic> map) {
     return Production(
       id: map['id'],
-      animalId: map['animal_id'] ??
-          (map['animal'] as Map<String, dynamic>?)?['id'] ??
-          0,
-      animalNome: animalNome ?? map['animal_nome'] ?? 'Desconhecido',
+      animalId: _animalIdFrom(map),
+      animalNome: _animalNomeFrom(map),
       data: DateTime.parse(map['data']),
       quantidade: (map['quantidade'] as num).toDouble(),
     );
@@ -143,6 +155,7 @@ class Expense {
   final double valor;
   final DateTime data;
   final String categoria; // Ração, Vacina, Manutenção, etc.
+  final String? origem; // null = manual; SAUDE = gerada por registro de saúde
 
   Expense({
     this.id,
@@ -150,14 +163,16 @@ class Expense {
     required this.valor,
     required this.data,
     required this.categoria,
+    this.origem,
   });
 
-  Map<String, dynamic> toMap() {
+  bool get automatica => origem != null;
+
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'descricao': descricao,
       'valor': valor,
-      'data': data.toIso8601String(),
+      'data': _toApiDate(data),
       'categoria': categoria,
     };
   }
@@ -165,10 +180,11 @@ class Expense {
   factory Expense.fromMap(Map<String, dynamic> map) {
     return Expense(
       id: map['id'],
-      descricao: map['descricao'],
+      descricao: map['descricao'] ?? '',
       valor: (map['valor'] as num).toDouble(),
       data: DateTime.parse(map['data']),
-      categoria: map['categoria'],
+      categoria: map['categoria'] ?? 'Outros',
+      origem: map['origem'],
     );
   }
 }
@@ -179,6 +195,7 @@ class Reminder {
   final String descricao;
   final DateTime data;
   final bool concluido;
+  final String? origem; // null = manual; VACINA = próxima dose de vacina
 
   Reminder({
     this.id,
@@ -186,25 +203,26 @@ class Reminder {
     required this.descricao,
     required this.data,
     this.concluido = false,
+    this.origem,
   });
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'titulo': titulo,
       'descricao': descricao,
-      'data': data.toIso8601String(),
-      'concluido': concluido ? 1 : 0,
+      'data': _toApiDate(data),
+      'concluido': concluido,
     };
   }
 
   factory Reminder.fromMap(Map<String, dynamic> map) {
     return Reminder(
       id: map['id'],
-      titulo: map['titulo'],
-      descricao: map['descricao'],
+      titulo: map['titulo'] ?? '',
+      descricao: map['descricao'] ?? '',
       data: DateTime.parse(map['data']),
-      concluido: map['concluido'] == 1 || map['concluido'] == true,
+      concluido: map['concluido'] ?? false,
+      origem: map['origem'],
     );
   }
 }
@@ -238,16 +256,15 @@ class StockItem {
 
   double get valorTotal => quantidade * precoUnitario;
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'nome': nome,
       'categoria': categoria,
       'quantidade': quantidade,
       'unidade': unidade,
       'quantidadeMinima': quantidadeMinima,
       'precoUnitario': precoUnitario,
-      'validade': validade?.toIso8601String(),
+      'validade': _toApiDateOrNull(validade),
       'observacao': observacao,
     };
   }
@@ -261,9 +278,7 @@ class StockItem {
       unidade: map['unidade'] ?? 'un',
       quantidadeMinima: (map['quantidadeMinima'] as num?)?.toDouble() ?? 0,
       precoUnitario: (map['precoUnitario'] as num?)?.toDouble() ?? 0,
-      validade: map['validade'] != null
-          ? DateTime.tryParse(map['validade'])
-          : null,
+      validade: _parseDateOrNull(map['validade']),
       observacao: map['observacao'],
     );
   }
@@ -299,21 +314,32 @@ class HealthRecord {
     this.observacao,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'animal': _animalRef(animalId),
+      'tipo': tipo,
+      'descricao': descricao,
+      'medicamento': medicamento,
+      'veterinario': veterinario,
+      'data': _toApiDate(data),
+      'dataFim': _toApiDateOrNull(dataFim),
+      'custo': custo,
+      'status': status,
+      'observacao': observacao,
+    };
+  }
+
   factory HealthRecord.fromMap(Map<String, dynamic> map) {
     return HealthRecord(
       id: map['id'],
-      animalId: (map['animal'] as Map<String, dynamic>?)?['id'] ??
-          map['animal_id'] ??
-          0,
-      animalNome: (map['animal'] as Map<String, dynamic>?)?['nome'] ??
-          map['animal_nome'] ??
-          'Desconhecido',
+      animalId: _animalIdFrom(map),
+      animalNome: _animalNomeFrom(map),
       tipo: map['tipo'] ?? 'Tratamento',
       descricao: map['descricao'] ?? '',
       medicamento: map['medicamento'],
       veterinario: map['veterinario'],
       data: DateTime.parse(map['data']),
-      dataFim: map['dataFim'] != null ? DateTime.tryParse(map['dataFim']) : null,
+      dataFim: _parseDateOrNull(map['dataFim']),
       custo: (map['custo'] as num?)?.toDouble() ?? 0,
       status: map['status'] ?? 'Em andamento',
       observacao: map['observacao'],
@@ -345,20 +371,26 @@ class Vaccine {
     this.observacao,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'animal': _animalRef(animalId),
+      'nome': nome,
+      'dataAplicacao': _toApiDate(dataAplicacao),
+      'proximaDose': _toApiDateOrNull(proximaDose),
+      'lote': lote,
+      'veterinario': veterinario,
+      'observacao': observacao,
+    };
+  }
+
   factory Vaccine.fromMap(Map<String, dynamic> map) {
     return Vaccine(
       id: map['id'],
-      animalId: (map['animal'] as Map<String, dynamic>?)?['id'] ??
-          map['animal_id'] ??
-          0,
-      animalNome: (map['animal'] as Map<String, dynamic>?)?['nome'] ??
-          map['animal_nome'] ??
-          'Desconhecido',
+      animalId: _animalIdFrom(map),
+      animalNome: _animalNomeFrom(map),
       nome: map['nome'] ?? '',
       dataAplicacao: DateTime.parse(map['dataAplicacao']),
-      proximaDose: map['proximaDose'] != null
-          ? DateTime.tryParse(map['proximaDose'])
-          : null,
+      proximaDose: _parseDateOrNull(map['proximaDose']),
       lote: map['lote'],
       veterinario: map['veterinario'],
       observacao: map['observacao'],
@@ -390,21 +422,27 @@ class Reproduction {
     this.observacao,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'animal': _animalRef(animalId),
+      'tipo': tipo,
+      'data': _toApiDate(data),
+      'touro': touro,
+      'previsaoParto': _toApiDateOrNull(previsaoParto),
+      'status': status,
+      'observacao': observacao,
+    };
+  }
+
   factory Reproduction.fromMap(Map<String, dynamic> map) {
     return Reproduction(
       id: map['id'],
-      animalId: (map['animal'] as Map<String, dynamic>?)?['id'] ??
-          map['animal_id'] ??
-          0,
-      animalNome: (map['animal'] as Map<String, dynamic>?)?['nome'] ??
-          map['animal_nome'] ??
-          'Desconhecido',
+      animalId: _animalIdFrom(map),
+      animalNome: _animalNomeFrom(map),
       tipo: map['tipo'] ?? 'Cio',
       data: DateTime.parse(map['data']),
       touro: map['touro'],
-      previsaoParto: map['previsaoParto'] != null
-          ? DateTime.tryParse(map['previsaoParto'])
-          : null,
+      previsaoParto: _parseDateOrNull(map['previsaoParto']),
       status: map['status'] ?? 'Pendente',
       observacao: map['observacao'],
     );

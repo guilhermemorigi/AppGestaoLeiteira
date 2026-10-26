@@ -7,5 +7,7 @@ import java.util.List;
 
 @Repository
 public interface ProductionRepository extends JpaRepository<Production, Long> {
-    List<Production> findByAnimalId(Long animalId);
+    List<Production> findByAnimalIdOrderByDataDesc(Long animalId);
+    List<Production> findAllByOrderByDataDesc();
+    boolean existsByAnimalId(Long animalId);
 }

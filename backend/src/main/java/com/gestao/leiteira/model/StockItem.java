@@ -1,6 +1,5 @@
 package com.gestao.leiteira.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -26,7 +25,6 @@ public class StockItem {
 
     private Double precoUnitario = 0.0;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime validade;
 
     private String observacao;

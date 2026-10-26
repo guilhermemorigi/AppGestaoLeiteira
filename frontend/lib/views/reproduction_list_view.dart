@@ -41,19 +41,21 @@ class _ReproductionListViewState extends State<ReproductionListView> {
         _records = data;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
     }
   }
 
-  Future<void> _openForm() async {
+  Future<void> _openForm([Reproduction? item]) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const ReproductionFormView()),
+      MaterialPageRoute(builder: (_) => ReproductionFormView(record: item)),
     );
     if (result == true) _refresh();
   }
@@ -81,11 +83,10 @@ class _ReproductionListViewState extends State<ReproductionListView> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _stat('Prenhes / Confirmadas', '$prenhes',
-                            AppTheme.blue),
+                        child: _stat(
+                            'Prenhes / Confirmadas', '$prenhes', AppTheme.blue),
                       ),
-                      Container(
-                          width: 1, height: 36, color: Colors.grey[300]),
+                      Container(width: 1, height: 36, color: Colors.grey[300]),
                       Expanded(
                         child: _stat('Partos ≤ 30 dias', '$partosProximos',
                             AppTheme.purple),
@@ -98,8 +99,7 @@ class _ReproductionListViewState extends State<ReproductionListView> {
                       ? const EmptyState(
                           icon: Icons.favorite_outline,
                           message: 'Nenhum registro reprodutivo',
-                          hint:
-                              'Acompanhe cio, cobertura, gestação e partos.',
+                          hint: 'Acompanhe cio, cobertura, gestação e partos.',
                         )
                       : RefreshIndicator(
                           onRefresh: _refresh,
@@ -112,6 +112,7 @@ class _ReproductionListViewState extends State<ReproductionListView> {
                                 margin: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 6),
                                 child: ListTile(
+                                  onTap: () => _openForm(r),
                                   leading: CircleAvatar(
                                     backgroundColor:
                                         AppTheme.purple.withOpacity(0.12),
@@ -122,7 +123,8 @@ class _ReproductionListViewState extends State<ReproductionListView> {
                                   title: Row(
                                     children: [
                                       Expanded(
-                                        child: Text('${r.animalNome} • ${r.tipo}',
+                                        child: Text(
+                                            '${r.animalNome} • ${r.tipo}',
                                             style: const TextStyle(
                                                 fontWeight: FontWeight.bold)),
                                       ),
@@ -166,7 +168,7 @@ class _ReproductionListViewState extends State<ReproductionListView> {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openForm,
+        onPressed: () => _openForm(),
         icon: const Icon(Icons.add),
         label: const Text('Novo Registro'),
         backgroundColor: AppTheme.purple,
@@ -193,7 +195,8 @@ class _ReproductionListViewState extends State<ReproductionListView> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Excluir Registro'),
-        content: Text('Deseja excluir o registro de ${r.tipo} de ${r.animalNome}?'),
+        content:
+            Text('Deseja excluir o registro de ${r.tipo} de ${r.animalNome}?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -204,10 +207,12 @@ class _ReproductionListViewState extends State<ReproductionListView> {
               try {
                 await _apiService.deleteReproduction(r.id!);
                 _refresh();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Erro ao excluir.')),
+                    SnackBar(
+                        content: Text(
+                            describeError(e, fallback: 'Erro ao excluir.'))),
                   );
                 }
               }

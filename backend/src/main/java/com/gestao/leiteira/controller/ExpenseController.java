@@ -1,37 +1,46 @@
 package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.Expense;
-import com.gestao.leiteira.repository.ExpenseRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.gestao.leiteira.service.ExpenseService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/expenses")
-@CrossOrigin(origins = "*")
 public class ExpenseController {
 
-    @Autowired
-    private ExpenseRepository repository;
+    private final ExpenseService service;
+
+    public ExpenseController(ExpenseService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<Expense> getAll() {
-        return repository.findAll();
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Expense getById(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Expense create(@RequestBody Expense expense) {
-        return repository.save(expense);
+        return service.create(expense);
+    }
+
+    @PutMapping("/{id}")
+    public Expense update(@PathVariable Long id, @RequestBody Expense expense) {
+        return service.update(id, expense);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

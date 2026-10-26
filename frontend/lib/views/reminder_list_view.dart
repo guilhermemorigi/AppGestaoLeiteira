@@ -33,12 +33,36 @@ class _ReminderListViewState extends State<ReminderListView> {
         _reminders = data;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
+    }
+  }
+
+  Future<void> _openForm([Reminder? reminder]) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (context) => ReminderFormView(reminder: reminder)),
+    );
+    if (result == true) _refreshData();
+  }
+
+  Future<void> _toggleConcluido(Reminder r) async {
+    try {
+      await _apiService.updateReminderStatus(r.id!, !r.concluido);
+      _refreshData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(describeError(e))),
+        );
+      }
     }
   }
 
@@ -64,15 +88,20 @@ class _ReminderListViewState extends State<ReminderListView> {
                         margin: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         child: ListTile(
-                          leading: Icon(
-                            Icons.event_note,
-                            color: isOverdue ? Colors.red : Colors.green,
+                          onTap: () => _openForm(r),
+                          leading: Checkbox(
+                            value: r.concluido,
+                            onChanged: (_) => _toggleConcluido(r),
+                            activeColor: Colors.green,
                           ),
                           title: Text(
                             r.titulo,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isOverdue ? Colors.red : null,
+                              decoration: r.concluido
+                                  ? TextDecoration.lineThrough
+                                  : null,
                             ),
                           ),
                           subtitle: Column(
@@ -99,13 +128,7 @@ class _ReminderListViewState extends State<ReminderListView> {
                   ),
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ReminderFormView()),
-          );
-          if (result == true) _refreshData();
-        },
+        onPressed: () => _openForm(),
         label: const Text('Novo Lembrete'),
         icon: const Icon(Icons.add_alert),
       ),
@@ -115,24 +138,26 @@ class _ReminderListViewState extends State<ReminderListView> {
   void _confirmDelete(Reminder r) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Excluir Lembrete'),
         content: Text('Deseja realmente excluir o lembrete "${r.titulo}"?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancelar')),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               try {
                 await _apiService.deleteReminder(r.id!);
                 _refreshData();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Erro ao excluir. Verifique a conexão.')),
+                    SnackBar(
+                        content: Text(describeError(e,
+                            fallback:
+                                'Erro ao excluir. Verifique a conexão.'))),
                   );
                 }
               }

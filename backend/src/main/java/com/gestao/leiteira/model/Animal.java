@@ -1,6 +1,5 @@
 package com.gestao.leiteira.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -22,7 +21,6 @@ public class Animal {
     private String sexo; // Fêmea, Macho
     private Double peso; // kg
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime dataNascimento;
 
     private String status = "Ativo"; // Ativo, Vendido, Morto, Seco, Lactação

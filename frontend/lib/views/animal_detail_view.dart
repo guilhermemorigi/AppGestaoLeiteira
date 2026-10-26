@@ -8,6 +8,7 @@ import 'animal_form_view.dart';
 import 'health_form_view.dart';
 import 'vaccine_form_view.dart';
 import 'reproduction_form_view.dart';
+import 'production_form_view.dart';
 
 class AnimalDetailView extends StatefulWidget {
   final Animal animal;
@@ -57,11 +58,13 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
         _averageProduction = production.isEmpty ? 0 : total / production.length;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao carregar dados do animal.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao carregar dados do animal.'))),
         );
       }
     }
@@ -72,13 +75,18 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
       context,
       MaterialPageRoute(builder: (_) => AnimalFormView(animal: _animal)),
     );
-    if (result == true) {
-      final atualizados = await _api.getAllAnimals();
-      final novo = atualizados.firstWhere((a) => a.id == _animal.id,
-          orElse: () => _animal);
-      setState(() => _animal = novo);
-      _loadData();
+    if (result == true) await _reloadAnimal();
+  }
+
+  /// Recarrega o cadastro (o status pode mudar, ex.: parto → Lactação).
+  Future<void> _reloadAnimal() async {
+    try {
+      final atualizado = await _api.getAnimal(_animal.id!);
+      if (mounted) setState(() => _animal = atualizado);
+    } catch (_) {
+      // mantém os dados atuais se a recarga falhar
     }
+    _loadData();
   }
 
   Future<void> _quickAdd(Widget page) async {
@@ -86,7 +94,7 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
       context,
       MaterialPageRoute(builder: (_) => page),
     );
-    if (result == true) _loadData();
+    if (result == true) _reloadAnimal();
   }
 
   @override
@@ -176,7 +184,8 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
                     _miniStat(Icons.water_drop,
                         '${nf.format(_totalProduction)} L', AppTheme.blue),
                     const SizedBox(width: 16),
-                    _miniStat(Icons.speed,
+                    _miniStat(
+                        Icons.speed,
                         '${nf.format(_averageProduction)} L/dia',
                         AppTheme.orange),
                   ],
@@ -230,13 +239,7 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
       emptyMsg: 'Nenhum registro de produção',
       color: AppTheme.blue,
       addLabel: 'Registrar produção',
-      onAdd: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Use a aba Produção no menu principal para lançar a ordenha.')),
-        );
-      },
+      onAdd: () => _quickAdd(ProductionFormView(animal: _animal)),
       list: ListView.separated(
         padding: const EdgeInsets.only(bottom: 80),
         itemCount: _history.length,
@@ -244,6 +247,7 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
         itemBuilder: (context, i) {
           final p = _history[i];
           return ListTile(
+            onTap: () => _quickAdd(ProductionFormView(production: p)),
             leading: const Icon(Icons.calendar_today,
                 size: 20, color: AppTheme.blue),
             title: Text(DateFormat('dd/MM/yyyy').format(p.data)),
@@ -271,6 +275,7 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: ListTile(
+              onTap: () => _quickAdd(HealthFormView(record: r)),
               leading: const Icon(Icons.local_hospital, color: AppTheme.red),
               title: Text(r.descricao,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -300,6 +305,7 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: ListTile(
+              onTap: () => _quickAdd(VaccineFormView(vaccine: v)),
               leading: const Icon(Icons.vaccines, color: AppTheme.teal),
               title: Text(v.nome,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -330,11 +336,11 @@ class _AnimalDetailViewState extends State<AnimalDetailView> {
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: ListTile(
+              onTap: () => _quickAdd(ReproductionFormView(record: r)),
               leading: const Icon(Icons.favorite, color: AppTheme.purple),
               title: Text(r.tipo,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(
-                  '${DateFormat('dd/MM/yyyy').format(r.data)}'
+              subtitle: Text('${DateFormat('dd/MM/yyyy').format(r.data)}'
                   '${r.previsaoParto != null ? "\nPrevisão de parto: ${DateFormat('dd/MM/yyyy').format(r.previsaoParto!)}" : ""}'),
               isThreeLine: r.previsaoParto != null,
               trailing: StatusChip(r.status),

@@ -9,4 +9,5 @@ import java.util.List;
 public interface ReproductionRepository extends JpaRepository<Reproduction, Long> {
     List<Reproduction> findByAnimalIdOrderByDataDesc(Long animalId);
     List<Reproduction> findAllByOrderByDataDesc();
+    boolean existsByAnimalId(Long animalId);
 }

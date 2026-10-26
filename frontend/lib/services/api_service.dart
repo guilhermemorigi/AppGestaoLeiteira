@@ -1,486 +1,231 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import '../models/models.dart';
 
+/// Erro retornado pelo backend, com a mensagem amigável enviada no corpo
+/// da resposta ({"status": ..., "message": ...}).
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+
+  ApiException(this.statusCode, this.message);
+
+  @override
+  String toString() => message;
+}
+
+/// Mensagem para exibir ao usuário a partir de qualquer erro de chamada à API.
+String describeError(Object error,
+    {String fallback = 'Erro ao conectar com o servidor.'}) {
+  return error is ApiException ? error.message : fallback;
+}
+
 class ApiService {
-  // Use 10.0.2.2 para o emulador Android (aponta para o localhost do PC)
-  // Use localhost para iOS ou Web
-  static const String baseUrl = 'http://10.0.2.2:8080/api';
-
-  // Backend espera exatamente 3 casas decimais: "yyyy-MM-dd'T'HH:mm:ss.SSS"
-  static final _dateFormat = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-  static String _fmt(DateTime date) => _dateFormat.format(date);
-
-  // --- MÉTODOS DE USUÁRIO (LOGIN/SIGNUP) ---
-
-  Future<User?> login(String username, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-      }),
-    );
-    if (response.statusCode == 200) {
-      return User.fromMap(jsonDecode(response.body));
+  /// URL da API. Pode ser definida na execução:
+  ///   flutter run --dart-define=API_URL=http://192.168.0.10:8080/api
+  /// Sem isso, usa 10.0.2.2 no emulador Android (localhost do PC) e
+  /// localhost nas demais plataformas (Web, Windows, iOS Simulator).
+  static String get baseUrl {
+    const fromEnv = String.fromEnvironment('API_URL');
+    if (fromEnv.isNotEmpty) return fromEnv;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8080/api';
     }
-    return null; // Credenciais inválidas
+    return 'http://localhost:8080/api';
   }
 
-  Future<User> createUser(User user) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/signup'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(user.toMap()),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return User.fromMap(jsonDecode(response.body));
+  static const _timeout = Duration(seconds: 15);
+  static const _jsonHeaders = {'Content-Type': 'application/json'};
+
+  // --- INFRAESTRUTURA HTTP ---
+
+  Uri _uri(String path) => Uri.parse('$baseUrl$path');
+
+  Future<dynamic> _send(Future<http.Response> request) async {
+    final response = await request.timeout(_timeout);
+    final body = utf8.decode(response.bodyBytes);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body.isEmpty ? null : jsonDecode(body);
     }
-    throw Exception('Falha ao criar usuário (Username já pode existir)');
+    throw ApiException(response.statusCode, _extractMessage(body));
   }
 
-  // --- MÉTODOS DE ANIMAIS ---
-
-  Future<List<Animal>> getAllAnimals() async {
+  String _extractMessage(String body) {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/animals'));
-
-      if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        return body.map((item) => Animal.fromMap(item)).toList();
-      } else {
-        throw Exception('Falha ao carregar animais');
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['message'] is String) {
+        return decoded['message'];
       }
-    } catch (e) {
-      rethrow;
-    }
+    } catch (_) {}
+    return 'Erro inesperado no servidor.';
   }
 
-  Future<Animal> createAnimal(Animal animal) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/animals'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(animal.toMap()),
-      );
+  Future<dynamic> _get(String path) => _send(http.get(_uri(path)));
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return Animal.fromMap(jsonDecode(response.body));
-      } else {
-        throw Exception('Falha ao criar animal');
-      }
-    } catch (e) {
-      rethrow;
-    }
+  Future<dynamic> _post(String path, [Object? body]) =>
+      _send(http.post(_uri(path),
+          headers: _jsonHeaders, body: body == null ? null : jsonEncode(body)));
+
+  Future<dynamic> _put(String path, Object body) => _send(
+      http.put(_uri(path), headers: _jsonHeaders, body: jsonEncode(body)));
+
+  Future<dynamic> _patch(String path) => _send(http.patch(_uri(path)));
+
+  Future<void> _delete(String path) => _send(http.delete(_uri(path)));
+
+  Future<List<T>> _getList<T>(
+      String path, T Function(Map<String, dynamic>) fromMap) async {
+    final List<dynamic> body = await _get(path);
+    return body.map((item) => fromMap(item as Map<String, dynamic>)).toList();
   }
 
-  Future<Animal> updateAnimal(int id, Animal animal) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/animals/$id'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(animal.toMap()),
-    );
-    if (response.statusCode == 200) {
-      return Animal.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao atualizar animal');
+  // --- USUÁRIOS / AUTENTICAÇÃO ---
+
+  /// Lança [ApiException] com a mensagem do servidor em caso de falha
+  /// (credenciais inválidas, usuário inativo, etc.).
+  Future<User> login(String username, String password) async {
+    return User.fromMap(await _post(
+        '/users/login', {'username': username, 'password': password}));
   }
 
-  Future<void> deleteAnimal(int id) async {
-    try {
-      final response = await http.delete(Uri.parse('$baseUrl/animals/$id'));
+  /// Cadastro público (tela "Cadastre-se"): o servidor define o perfil.
+  Future<User> signup(User user) async =>
+      User.fromMap(await _post('/users/signup', user.toJson()));
 
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        throw Exception('Falha ao deletar animal');
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
+  /// Criação pela tela de gerenciamento de usuários (com perfil escolhido).
+  Future<User> createUser(User user) async =>
+      User.fromMap(await _post('/users', user.toJson()));
 
-  // --- MÉTODOS DE GASTOS (EXPENSES) ---
+  Future<List<User>> getAllUsers() => _getList('/users', User.fromMap);
 
-  Future<List<Expense>> getAllExpenses() async {
-    final response = await http.get(Uri.parse('$baseUrl/expenses'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => Expense.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar gastos');
-  }
+  Future<User> updateUser(int id, User user) async =>
+      User.fromMap(await _put('/users/$id', user.toJson()));
 
-  Future<Expense> createExpense(Expense expense) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/expenses'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'descricao': expense.descricao,
-        'valor': expense.valor,
-        'data': _fmt(expense.data),
-        'categoria': expense.categoria,
-      }),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return Expense.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao criar gasto');
-  }
+  Future<void> deleteUser(int id) => _delete('/users/$id');
 
-  Future<void> deleteExpense(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/expenses/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao deletar gasto');
-    }
-  }
+  // --- ANIMAIS ---
 
-  Future<double> getTotalExpenses() async {
-    final expenses = await getAllExpenses();
-    return expenses.fold<double>(0.0, (sum, item) => sum + item.valor);
-  }
+  Future<List<Animal>> getAllAnimals() => _getList('/animals', Animal.fromMap);
 
-  // --- MÉTODOS DE PRODUÇÃO ---
+  Future<Animal> getAnimal(int id) async =>
+      Animal.fromMap(await _get('/animals/$id'));
 
-  Future<List<Production>> getAllProduction() async {
-    final response = await http.get(Uri.parse('$baseUrl/production'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body
-          .map((item) =>
-              Production.fromMap(item, animalNome: item['animal']?['nome']))
-          .toList();
-    }
-    throw Exception('Falha ao carregar produção');
-  }
+  Future<Animal> createAnimal(Animal animal) async =>
+      Animal.fromMap(await _post('/animals', animal.toJson()));
 
-  Future<List<Production>> getProductionByAnimal(int animalId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/production/animal/$animalId'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body
-          .map((item) =>
-              Production.fromMap(item, animalNome: item['animal']?['nome']))
-          .toList();
-    }
-    throw Exception('Falha ao carregar produção do animal');
-  }
+  Future<Animal> updateAnimal(int id, Animal animal) async =>
+      Animal.fromMap(await _put('/animals/$id', animal.toJson()));
 
-  Future<Production> createProduction(Production production) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/production'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'animal': {'id': production.animalId},
-        'data': _fmt(production.data),
-        'quantidade': production.quantidade,
-      }),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final body = jsonDecode(response.body);
-      return Production.fromMap(body, animalNome: body['animal']?['nome']);
-    }
-    throw Exception('Falha ao registrar produção');
-  }
+  Future<void> deleteAnimal(int id) => _delete('/animals/$id');
 
-  Future<void> deleteProduction(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/production/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao deletar produção');
-    }
-  }
+  // --- PRODUÇÃO ---
 
-  // --- MÉTODOS DE LEMBRETES ---
+  Future<List<Production>> getAllProduction() =>
+      _getList('/production', Production.fromMap);
 
-  Future<List<Reminder>> getAllReminders() async {
-    final response = await http.get(Uri.parse('$baseUrl/reminders'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => Reminder.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar lembretes');
-  }
+  Future<List<Production>> getProductionByAnimal(int animalId) =>
+      _getList('/production/animal/$animalId', Production.fromMap);
 
-  Future<Reminder> createReminder(Reminder reminder) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/reminders'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'titulo': reminder.titulo,
-        'descricao': reminder.descricao,
-        'data': _fmt(reminder.data),
-        'concluido': reminder.concluido,
-      }),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return Reminder.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao criar lembrete');
-  }
+  Future<Production> createProduction(Production production) async =>
+      Production.fromMap(await _post('/production', production.toJson()));
 
-  Future<void> updateReminderStatus(int id, bool concluido) async {
-    final response = await http.patch(
-      Uri.parse('$baseUrl/reminders/$id/status?concluido=$concluido'),
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Falha ao atualizar status do lembrete');
-    }
-  }
+  Future<Production> updateProduction(int id, Production production) async =>
+      Production.fromMap(await _put('/production/$id', production.toJson()));
 
-  Future<void> deleteReminder(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/reminders/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao deletar lembrete');
-    }
-  }
+  Future<void> deleteProduction(int id) => _delete('/production/$id');
 
-  // --- GERENCIAMENTO DE USUÁRIOS ---
+  // --- GASTOS (EXPENSES) ---
 
-  Future<List<User>> getAllUsers() async {
-    final response = await http.get(Uri.parse('$baseUrl/users'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => User.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar usuários');
-  }
+  Future<List<Expense>> getAllExpenses() =>
+      _getList('/expenses', Expense.fromMap);
 
-  Future<User> updateUser(int id, User user) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/users/$id'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(user.toMap()),
-    );
-    if (response.statusCode == 200) {
-      return User.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao atualizar usuário');
-  }
+  Future<Expense> createExpense(Expense expense) async =>
+      Expense.fromMap(await _post('/expenses', expense.toJson()));
 
-  Future<void> deleteUser(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/users/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao excluir usuário');
-    }
-  }
+  Future<Expense> updateExpense(int id, Expense expense) async =>
+      Expense.fromMap(await _put('/expenses/$id', expense.toJson()));
+
+  Future<void> deleteExpense(int id) => _delete('/expenses/$id');
+
+  // --- LEMBRETES ---
+
+  Future<List<Reminder>> getAllReminders() =>
+      _getList('/reminders', Reminder.fromMap);
+
+  Future<Reminder> createReminder(Reminder reminder) async =>
+      Reminder.fromMap(await _post('/reminders', reminder.toJson()));
+
+  Future<Reminder> updateReminder(int id, Reminder reminder) async =>
+      Reminder.fromMap(await _put('/reminders/$id', reminder.toJson()));
+
+  Future<void> updateReminderStatus(int id, bool concluido) =>
+      _patch('/reminders/$id/status?concluido=$concluido');
+
+  Future<void> deleteReminder(int id) => _delete('/reminders/$id');
 
   // --- ESTOQUE ---
 
-  Future<List<StockItem>> getAllStock() async {
-    final response = await http.get(Uri.parse('$baseUrl/stock'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => StockItem.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar estoque');
-  }
+  Future<List<StockItem>> getAllStock() =>
+      _getList('/stock', StockItem.fromMap);
 
-  Future<StockItem> createStock(StockItem item) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/stock'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'nome': item.nome,
-        'categoria': item.categoria,
-        'quantidade': item.quantidade,
-        'unidade': item.unidade,
-        'quantidadeMinima': item.quantidadeMinima,
-        'precoUnitario': item.precoUnitario,
-        'validade': item.validade != null ? _fmt(item.validade!) : null,
-        'observacao': item.observacao,
-      }),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return StockItem.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao criar item de estoque');
-  }
+  Future<StockItem> createStock(StockItem item) async =>
+      StockItem.fromMap(await _post('/stock', item.toJson()));
 
-  Future<StockItem> updateStock(int id, StockItem item) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/stock/$id'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'nome': item.nome,
-        'categoria': item.categoria,
-        'quantidade': item.quantidade,
-        'unidade': item.unidade,
-        'quantidadeMinima': item.quantidadeMinima,
-        'precoUnitario': item.precoUnitario,
-        'validade': item.validade != null ? _fmt(item.validade!) : null,
-        'observacao': item.observacao,
-      }),
-    );
-    if (response.statusCode == 200) {
-      return StockItem.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao atualizar item de estoque');
-  }
+  Future<StockItem> updateStock(int id, StockItem item) async =>
+      StockItem.fromMap(await _put('/stock/$id', item.toJson()));
 
-  Future<StockItem> adjustStock(int id, double delta) async {
-    final response = await http.patch(
-      Uri.parse('$baseUrl/stock/$id/quantidade?delta=$delta'),
-    );
-    if (response.statusCode == 200) {
-      return StockItem.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao ajustar quantidade');
-  }
+  Future<StockItem> adjustStock(int id, double delta) async =>
+      StockItem.fromMap(await _patch('/stock/$id/quantidade?delta=$delta'));
 
-  Future<void> deleteStock(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/stock/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao excluir item de estoque');
-    }
-  }
+  Future<void> deleteStock(int id) => _delete('/stock/$id');
 
   // --- SAÚDE E TRATAMENTOS ---
 
-  Future<List<HealthRecord>> getAllHealth() async {
-    final response = await http.get(Uri.parse('$baseUrl/health'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => HealthRecord.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar registros de saúde');
-  }
+  Future<List<HealthRecord>> getAllHealth() =>
+      _getList('/health', HealthRecord.fromMap);
 
-  Future<List<HealthRecord>> getHealthByAnimal(int animalId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/health/animal/$animalId'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => HealthRecord.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar saúde do animal');
-  }
+  Future<List<HealthRecord>> getHealthByAnimal(int animalId) =>
+      _getList('/health/animal/$animalId', HealthRecord.fromMap);
 
-  Future<HealthRecord> createHealth(HealthRecord record) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/health'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'animal': {'id': record.animalId},
-        'tipo': record.tipo,
-        'descricao': record.descricao,
-        'medicamento': record.medicamento,
-        'veterinario': record.veterinario,
-        'data': _fmt(record.data),
-        'dataFim': record.dataFim != null ? _fmt(record.dataFim!) : null,
-        'custo': record.custo,
-        'status': record.status,
-        'observacao': record.observacao,
-      }),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return HealthRecord.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao registrar saúde');
-  }
+  Future<HealthRecord> createHealth(HealthRecord record) async =>
+      HealthRecord.fromMap(await _post('/health', record.toJson()));
 
-  Future<void> deleteHealth(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/health/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao excluir registro de saúde');
-    }
-  }
+  Future<HealthRecord> updateHealth(int id, HealthRecord record) async =>
+      HealthRecord.fromMap(await _put('/health/$id', record.toJson()));
+
+  Future<void> deleteHealth(int id) => _delete('/health/$id');
 
   // --- VACINAS ---
 
-  Future<List<Vaccine>> getAllVaccines() async {
-    final response = await http.get(Uri.parse('$baseUrl/vaccines'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => Vaccine.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar vacinas');
-  }
+  Future<List<Vaccine>> getAllVaccines() =>
+      _getList('/vaccines', Vaccine.fromMap);
 
-  Future<List<Vaccine>> getVaccinesByAnimal(int animalId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/vaccines/animal/$animalId'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => Vaccine.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar vacinas do animal');
-  }
+  Future<List<Vaccine>> getVaccinesByAnimal(int animalId) =>
+      _getList('/vaccines/animal/$animalId', Vaccine.fromMap);
 
-  Future<Vaccine> createVaccine(Vaccine vaccine) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/vaccines'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'animal': {'id': vaccine.animalId},
-        'nome': vaccine.nome,
-        'dataAplicacao': _fmt(vaccine.dataAplicacao),
-        'proximaDose':
-            vaccine.proximaDose != null ? _fmt(vaccine.proximaDose!) : null,
-        'lote': vaccine.lote,
-        'veterinario': vaccine.veterinario,
-        'observacao': vaccine.observacao,
-      }),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return Vaccine.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao registrar vacina');
-  }
+  Future<Vaccine> createVaccine(Vaccine vaccine) async =>
+      Vaccine.fromMap(await _post('/vaccines', vaccine.toJson()));
 
-  Future<void> deleteVaccine(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/vaccines/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao excluir vacina');
-    }
-  }
+  Future<Vaccine> updateVaccine(int id, Vaccine vaccine) async =>
+      Vaccine.fromMap(await _put('/vaccines/$id', vaccine.toJson()));
+
+  Future<void> deleteVaccine(int id) => _delete('/vaccines/$id');
 
   // --- REPRODUÇÃO ---
 
-  Future<List<Reproduction>> getAllReproduction() async {
-    final response = await http.get(Uri.parse('$baseUrl/reproduction'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => Reproduction.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar reprodução');
-  }
+  Future<List<Reproduction>> getAllReproduction() =>
+      _getList('/reproduction', Reproduction.fromMap);
 
-  Future<List<Reproduction>> getReproductionByAnimal(int animalId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/reproduction/animal/$animalId'));
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
-      return body.map((item) => Reproduction.fromMap(item)).toList();
-    }
-    throw Exception('Falha ao carregar reprodução do animal');
-  }
+  Future<List<Reproduction>> getReproductionByAnimal(int animalId) =>
+      _getList('/reproduction/animal/$animalId', Reproduction.fromMap);
 
-  Future<Reproduction> createReproduction(Reproduction r) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/reproduction'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'animal': {'id': r.animalId},
-        'tipo': r.tipo,
-        'data': _fmt(r.data),
-        'touro': r.touro,
-        'previsaoParto':
-            r.previsaoParto != null ? _fmt(r.previsaoParto!) : null,
-        'status': r.status,
-        'observacao': r.observacao,
-      }),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return Reproduction.fromMap(jsonDecode(response.body));
-    }
-    throw Exception('Falha ao registrar reprodução');
-  }
+  Future<Reproduction> createReproduction(Reproduction r) async =>
+      Reproduction.fromMap(await _post('/reproduction', r.toJson()));
 
-  Future<void> deleteReproduction(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/reproduction/$id'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Falha ao excluir registro de reprodução');
-    }
-  }
+  Future<Reproduction> updateReproduction(int id, Reproduction r) async =>
+      Reproduction.fromMap(await _put('/reproduction/$id', r.toJson()));
+
+  Future<void> deleteReproduction(int id) => _delete('/reproduction/$id');
 }

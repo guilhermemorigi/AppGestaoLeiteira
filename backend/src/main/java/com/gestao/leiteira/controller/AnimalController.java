@@ -1,54 +1,46 @@
 package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.Animal;
-import com.gestao.leiteira.repository.AnimalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.gestao.leiteira.service.AnimalService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/animals")
-@CrossOrigin(origins = "*")
 public class AnimalController {
 
-    @Autowired
-    private AnimalRepository repository;
+    private final AnimalService service;
+
+    public AnimalController(AnimalService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<Animal> getAll() {
-        return repository.findAll();
-    }
-
-    @PostMapping
-    public Animal create(@RequestBody Animal animal) {
-        return repository.save(animal);
+        return service.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Animal> getById(@PathVariable Long id) {
-        return repository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public Animal getById(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Animal create(@RequestBody Animal animal) {
+        return service.create(animal);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Animal> update(@PathVariable Long id, @RequestBody Animal animal) {
-        return repository.findById(id)
-                .map(existing -> {
-                    animal.setId(id);
-                    return ResponseEntity.ok(repository.save(animal));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public Animal update(@PathVariable Long id, @RequestBody Animal animal) {
+        return service.update(id, animal);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

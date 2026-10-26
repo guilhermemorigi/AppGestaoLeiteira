@@ -1,52 +1,51 @@
 package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.Reproduction;
-import com.gestao.leiteira.repository.ReproductionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.gestao.leiteira.service.ReproductionService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/reproduction")
-@CrossOrigin(origins = "*")
 public class ReproductionController {
 
-    @Autowired
-    private ReproductionRepository repository;
+    private final ReproductionService service;
+
+    public ReproductionController(ReproductionService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<Reproduction> getAll() {
-        return repository.findAllByOrderByDataDesc();
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Reproduction getById(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @GetMapping("/animal/{animalId}")
     public List<Reproduction> getByAnimal(@PathVariable Long animalId) {
-        return repository.findByAnimalIdOrderByDataDesc(animalId);
+        return service.findByAnimal(animalId);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Reproduction create(@RequestBody Reproduction reproduction) {
-        return repository.save(reproduction);
+        return service.create(reproduction);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Reproduction> update(@PathVariable Long id, @RequestBody Reproduction reproduction) {
-        return repository.findById(id)
-                .map(existing -> {
-                    reproduction.setId(id);
-                    return ResponseEntity.ok(repository.save(reproduction));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public Reproduction update(@PathVariable Long id, @RequestBody Reproduction reproduction) {
+        return service.update(id, reproduction);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

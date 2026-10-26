@@ -44,11 +44,13 @@ class _StockListViewState extends State<StockListView> {
         _items = data;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
     }
   }
@@ -65,10 +67,12 @@ class _StockListViewState extends State<StockListView> {
     try {
       await _apiService.adjustStock(item.id!, delta);
       _refresh();
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao ajustar quantidade.')),
+          SnackBar(
+              content: Text(
+                  describeError(e, fallback: 'Erro ao ajustar quantidade.'))),
         );
       }
     }
@@ -99,8 +103,7 @@ class _StockListViewState extends State<StockListView> {
                         child: _headerStat('Valor em estoque',
                             currency.format(valorTotal), AppTheme.primary),
                       ),
-                      Container(
-                          width: 1, height: 36, color: Colors.grey[300]),
+                      Container(width: 1, height: 36, color: Colors.grey[300]),
                       Expanded(
                         child: _headerStat(
                             'Estoque baixo',
@@ -254,10 +257,12 @@ class _StockListViewState extends State<StockListView> {
               try {
                 await _apiService.deleteStock(item.id!);
                 _refresh();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Erro ao excluir.')),
+                    SnackBar(
+                        content: Text(
+                            describeError(e, fallback: 'Erro ao excluir.'))),
                   );
                 }
               }

@@ -1,6 +1,5 @@
 package com.gestao.leiteira.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -16,7 +15,6 @@ public class Production {
     @JoinColumn(name = "animal_id", nullable = false)
     private Animal animal;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     @Column(nullable = false)
     private LocalDateTime data;
 

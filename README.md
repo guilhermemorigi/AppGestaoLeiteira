@@ -26,19 +26,32 @@ Sistema de gestão para produção leiteira voltado a agricultores familiares. P
 O **AppGestaoLeiteira** é composto por:
 
 - **Backend**: API REST desenvolvida com Spring Boot (Java 17), responsável por persistir os dados no PostgreSQL e expor os endpoints consumidos pelo app.
-- **Frontend**: Aplicativo mobile (e desktop) desenvolvido em Flutter, com banco de dados SQLite local para cache e visualizações gráficas da produção.
+- **Frontend**: Aplicativo mobile (e desktop) desenvolvido em Flutter, que consome a API REST e exibe visualizações gráficas da produção.
 
 ---
 
 ## Funcionalidades
 
 - **Dashboard inteligente** com resumo da produção e gráficos de evolução (fl_chart)
-- **Gestão do rebanho** — cadastro, edição e listagem de animais
+- **Gestão do rebanho** — cadastro, edição, ficha completa por animal e status (Ativo, Lactação, Seco, Vendido, Morto)
 - **Registro de produção** — lançamento diário de produção de leite por animal
-- **Controle financeiro** — registro de despesas operacionais
-- **Lembretes de manejo** — vacinas, consultas e tarefas agendadas
-- **Autenticação de usuários** — cadastro e login
-- **Relatórios detalhados** com drill-down por animal
+- **Controle financeiro** — registro e edição de despesas operacionais
+- **Saúde & tratamentos** — doenças, exames, cirurgias e vermifugação, com custo
+- **Vacinação** — calendário de vacinas e próximas doses
+- **Reprodução** — cio, cobertura, inseminação, diagnóstico de gestação e parto
+- **Estoque** — ração, medicamentos e insumos, com alerta de estoque baixo
+- **Agenda de manejo** — lembretes com marcação de concluído
+- **Usuários** — cadastro, login e perfis ADMIN / OPERADOR
+
+### Regras automáticas (backend)
+
+| Evento | Efeito |
+|--------|--------|
+| Registro de saúde com custo > 0 | Gera uma despesa (categoria *Veterinário*) que acompanha o custo; zerar o custo ou excluir o registro remove a despesa. A despesa só pode ser alterada pelo registro de saúde. |
+| Vacina com próxima dose | Cria um lembrete na Agenda para a data; alterar/remover a próxima dose atualiza/remove o lembrete. |
+| Reprodução do tipo *Parto* | Muda o status do animal para *Lactação* (exceto Vendido/Morto). |
+| Exclusão de animal com histórico | Bloqueada (409) para preservar o histórico — use o status Vendido/Morto. |
+| Cadastro público (`/signup`) | Cria sempre OPERADOR; o primeiro usuário do sistema vira ADMIN. O último ADMIN ativo não pode ser excluído, desativado ou rebaixado. |
 
 ---
 
@@ -61,7 +74,6 @@ O **AppGestaoLeiteira** é composto por:
 |-------------------|------------|
 | Flutter           | Stable     |
 | Dart              | >= 3.0.0   |
-| sqflite           | 2.3.0      |
 | fl_chart          | 0.70.0     |
 | http              | 1.6.0      |
 | intl              | 0.19.0     |
@@ -75,17 +87,16 @@ O **AppGestaoLeiteira** é composto por:
 │           Flutter App               │
 │  (Android / iOS / Windows / Web)    │
 │                                     │
-│  ┌─────────┐   ┌──────────────────┐ │
-│  │ SQLite  │   │   HTTP Client    │ │
-│  │ (local) │   │  (api_service)   │ │
-│  └─────────┘   └────────┬─────────┘ │
-└───────────────────────┬─┴───────────┘
-                        │ REST (HTTP/JSON)
-                        ▼
+│   views → ApiService (HTTP/JSON)    │
+└──────────────────┬──────────────────┘
+                   │ REST /api/**
+                   ▼
 ┌─────────────────────────────────────┐
 │        Spring Boot API (8080)       │
 │                                     │
 │  Controllers → Services → Repos     │
+│  (regras de negócio e validação     │
+│   ficam nos services)               │
 │                                     │
 │  ┌──────────────────────────────┐   │
 │  │         PostgreSQL           │   │
@@ -93,6 +104,8 @@ O **AppGestaoLeiteira** é composto por:
 │  └──────────────────────────────┘   │
 └─────────────────────────────────────┘
 ```
+
+Erros da API seguem o formato `{"timestamp": ..., "status": 409, "message": "..."}`; o app exibe a `message` ao usuário.
 
 ---
 
@@ -105,7 +118,7 @@ O **AppGestaoLeiteira** é composto por:
 ### Backend
 
 - [Java 17 (JDK)](https://adoptium.net/)
-- [Maven 3.x](https://maven.apache.org/) ou use o wrapper `mvnw` incluso
+- [Maven 3.x](https://maven.apache.org/) (o projeto não inclui o wrapper `mvnw`; também é possível rodar pela IDE)
 - [PostgreSQL 12+](https://www.postgresql.org/download/)
 
 ### Frontend
@@ -113,152 +126,64 @@ O **AppGestaoLeiteira** é composto por:
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)
 - Android Studio / Xcode (para emuladores) **ou** dispositivo físico conectado
 
-Verifique as instalações:
-
-```bash
-# Java
-java -version
-
-# Maven
-mvn -version
-
-# Flutter
-flutter doctor
-```
-
 ---
 
 ## Configuração do Ambiente
 
-### Banco de Dados (PostgreSQL)
+### Banco de Dados
 
-1. Inicie o PostgreSQL e acesse o cliente `psql`:
+O schema é gerenciado pelo Hibernate (`spring.jpa.hibernate.ddl-auto=update`).
 
-```sql
--- Crie o banco de dados (se não existir)
-CREATE DATABASE postgres;
-
--- Crie o usuário (se necessário)
-CREATE USER postgres WITH PASSWORD 'sua_senha';
-GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;
 ```
-
-2. Edite o arquivo `backend/src/main/resources/application.properties` com suas credenciais:
-
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/postgres
-spring.datasource.username=postgres
-spring.datasource.password=sua_senha
-```
-
-> **Atenção:** nunca suba credenciais reais para o repositório. Utilize variáveis de ambiente em produção.
-
-### Variáveis de Ambiente (opcional — produção)
-
-Para sobrescrever as propriedades sem editar o arquivo:
-
-```bash
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/postgres
-export SPRING_DATASOURCE_USERNAME=postgres
-export SPRING_DATASOURCE_PASSWORD=sua_senha
+users           — id, username, password (hash), nome_completo, email, telefone, role, ativo
+animals         — id, nome, idade, raca, numero_brinco, sexo, peso, data_nascimento, status
+production      — id, animal_id, data, quantidade
+expenses        — id, descricao, valor, data, categoria, origem
+reminders       — id, titulo, descricao, data, concluido, origem
+health_records  — id, animal_id, tipo, descricao, medicamento, veterinario, data, data_fim, custo, status, observacao, expense_id
+vaccines        — id, animal_id, nome, data_aplicacao, proxima_dose, lote, veterinario, observacao, reminder_id
+reproductions   — id, animal_id, tipo, data, touro, previsao_parto, status, observacao
+stock_items     — id, nome, categoria, quantidade, unidade, quantidade_minima, preco_unitario, validade, observacao
 ```
 
 ---
 
 ## Backend — Spring Boot
 
-### Instalar dependências e compilar
-
 ```bash
 cd backend
-
-# Com Maven instalado globalmente
-mvn clean install
-
-# Ou com o wrapper do projeto (não requer Maven global)
-./mvnw clean install       # Linux / macOS
-mvnw.cmd clean install     # Windows
+mvn clean install        # compilar
+mvn spring-boot:run      # iniciar (http://localhost:8080)
+mvn test                 # testes
 ```
 
-### Iniciar o servidor
-
-```bash
-# Com Maven
-mvn spring-boot:run
-
-# Com o wrapper
-./mvnw spring-boot:run       # Linux / macOS
-mvnw.cmd spring-boot:run     # Windows
-```
-
-O servidor estará disponível em: `http://localhost:8080`
-
-### Gerar o JAR e executar
-
-```bash
-mvn clean package
-java -jar target/leiteira-0.0.1-SNAPSHOT.jar
-```
-
-### Executar testes
-
-```bash
-mvn test
-```
+Ou execute `LeiteiraApplication` pela IDE.
 
 ---
 
 ## Frontend — Flutter
 
-### Instalar dependências
-
 ```bash
 cd frontend
 flutter pub get
+flutter run                 # dispositivo/emulador padrão
+flutter run -d windows      # ou chrome, android, ios...
 ```
 
-### Verificar dispositivos disponíveis
+### URL da API
+
+Por padrão o app usa `http://10.0.2.2:8080/api` no emulador Android (aponta para o PC) e `http://localhost:8080/api` nas demais plataformas. Para um celular físico ou outro servidor:
 
 ```bash
-flutter devices
+flutter run --dart-define=API_URL=http://192.168.0.10:8080/api
 ```
 
-### Iniciar o aplicativo
+### Testes
 
 ```bash
-# Dispositivo/emulador padrão
-flutter run
-
-# Plataforma específica
-flutter run -d android
-flutter run -d ios
-flutter run -d windows
-flutter run -d chrome          # Web
-```
-
-### Build para produção
-
-```bash
-# Android (APK)
-flutter build apk --release
-
-# Android (App Bundle para Play Store)
-flutter build appbundle --release
-
-# iOS
-flutter build ios --release
-
-# Windows
-flutter build windows --release
-
-# Web
-flutter build web --release
-```
-
-### Executar testes
-
-```bash
-flutter test
+flutter test                                   # testes unitários
+# teste de integração contra um backend real (use um banco de testes):
+flutter test test/api_contract_test.dart --dart-define=API_URL=http://localhost:8080/api
 ```
 
 ---
@@ -267,114 +192,51 @@ flutter test
 
 ```
 AppGestaoLeiteira/
+├── backend/                                   # API Spring Boot
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/com/gestao/leiteira/
+│       │   ├── LeiteiraApplication.java       # Entry point
+│       │   ├── config/WebConfig.java          # CORS
+│       │   ├── controller/                    # Endpoints REST (finos)
+│       │   ├── service/                       # Regras de negócio e validações
+│       │   ├── repository/                    # Spring Data JPA
+│       │   ├── model/                         # Entidades JPA
+│       │   ├── exception/                     # ApiException + handler global
+│       │   └── security/PasswordHasher.java   # Hash de senhas (PBKDF2)
+│       └── resources/application.properties
 │
-├── backend/                          # API Spring Boot
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/gestao/leiteira/
-│   │   │   │   ├── LeiteiraApplication.java     # Entry point
-│   │   │   │   ├── controller/                  # REST controllers
-│   │   │   │   │   ├── AnimalController.java
-│   │   │   │   │   ├── ProductionController.java
-│   │   │   │   │   ├── ExpenseController.java
-│   │   │   │   │   ├── ReminderController.java
-│   │   │   │   │   └── UserController.java
-│   │   │   │   ├── model/                       # Entidades JPA
-│   │   │   │   │   ├── Animal.java
-│   │   │   │   │   ├── Production.java
-│   │   │   │   │   ├── Expense.java
-│   │   │   │   │   ├── Reminder.java
-│   │   │   │   │   └── User.java
-│   │   │   │   ├── repository/                  # Spring Data JPA
-│   │   │   │   │   ├── AnimalRepository.java
-│   │   │   │   │   ├── ProductionRepository.java
-│   │   │   │   │   ├── ExpenseRepository.java
-│   │   │   │   │   ├── ReminderRepository.java
-│   │   │   │   │   └── UserRepository.java
-│   │   │   │   └── service/                     # Regras de negócio
-│   │   │   └── resources/
-│   │   │       └── application.properties       # Configurações
-│   │   └── test/                                # Testes unitários
-│   └── pom.xml                                  # Dependências Maven
-│
-└── frontend/                         # App Flutter
+└── frontend/                                  # App Flutter
     ├── lib/
-    │   ├── main.dart                            # Entry point & rotas
-    │   ├── models/
-    │   │   └── models.dart                      # Data models
-    │   ├── services/
-    │   │   ├── api_service.dart                 # Comunicação HTTP
-    │   │   └── database_service.dart            # SQLite local
-    │   └── views/                               # Telas do app
-    │       ├── dashboard_view.dart
-    │       ├── login_view.dart
-    │       ├── signup_view.dart
-    │       ├── animal_list_view.dart
-    │       ├── animal_form_view.dart
-    │       ├── animal_detail_view.dart
-    │       ├── production_list_view.dart
-    │       ├── production_form_view.dart
-    │       ├── expense_list_view.dart
-    │       ├── expense_form_view.dart
-    │       ├── reminder_list_view.dart
-    │       └── reminder_form_view.dart
-    ├── pubspec.yaml                             # Dependências Flutter
-    └── analysis_options.yaml                    # Configuração do linter
+    │   ├── main.dart                          # Entry point & navegação
+    │   ├── models/models.dart                 # Models + (de)serialização da API
+    │   ├── services/api_service.dart          # Cliente HTTP da API
+    │   ├── theme/app_theme.dart               # Tema e widgets compartilhados
+    │   └── views/                             # Telas (lista + formulário por módulo)
+    └── test/
 ```
 
 ---
 
 ## Endpoints da API
 
-Base URL: `http://localhost:8080`
+Base URL: `http://localhost:8080/api`
 
-### Usuários
+Todos os módulos abaixo têm `GET /`, `GET /{id}`, `POST /`, `PUT /{id}` e `DELETE /{id}`.
 
-| Método | Rota               | Descrição              |
-|--------|--------------------|------------------------|
-| POST   | `/users`           | Cadastrar usuário      |
-| POST   | `/users/login`     | Autenticar usuário     |
-| GET    | `/users/{id}`      | Buscar usuário por ID  |
+| Módulo | Rota base | Rotas extras |
+|--------|-----------|--------------|
+| Animais | `/animals` | — |
+| Produção | `/production` | `GET /animal/{animalId}` |
+| Despesas | `/expenses` | — |
+| Lembretes | `/reminders` | `PATCH /{id}/status?concluido=true` |
+| Saúde | `/health` | `GET /animal/{animalId}` |
+| Vacinas | `/vaccines` | `GET /animal/{animalId}` |
+| Reprodução | `/reproduction` | `GET /animal/{animalId}` |
+| Estoque | `/stock` | `PATCH /{id}/quantidade?delta=-5` |
+| Usuários | `/users` | `POST /signup`, `POST /login` |
 
-### Animais
-
-| Método | Rota               | Descrição              |
-|--------|--------------------|------------------------|
-| GET    | `/animals`         | Listar animais         |
-| POST   | `/animals`         | Cadastrar animal       |
-| GET    | `/animals/{id}`    | Buscar animal por ID   |
-| PUT    | `/animals/{id}`    | Atualizar animal       |
-| DELETE | `/animals/{id}`    | Remover animal         |
-
-### Produção
-
-| Método | Rota                  | Descrição                     |
-|--------|-----------------------|-------------------------------|
-| GET    | `/productions`        | Listar registros de produção  |
-| POST   | `/productions`        | Registrar produção            |
-| GET    | `/productions/{id}`   | Buscar registro por ID        |
-| PUT    | `/productions/{id}`   | Atualizar registro            |
-| DELETE | `/productions/{id}`   | Remover registro              |
-
-### Despesas
-
-| Método | Rota               | Descrição              |
-|--------|--------------------|------------------------|
-| GET    | `/expenses`        | Listar despesas        |
-| POST   | `/expenses`        | Cadastrar despesa      |
-| GET    | `/expenses/{id}`   | Buscar despesa por ID  |
-| PUT    | `/expenses/{id}`   | Atualizar despesa      |
-| DELETE | `/expenses/{id}`   | Remover despesa        |
-
-### Lembretes
-
-| Método | Rota               | Descrição              |
-|--------|--------------------|------------------------|
-| GET    | `/reminders`       | Listar lembretes       |
-| POST   | `/reminders`       | Criar lembrete         |
-| GET    | `/reminders/{id}`  | Buscar lembrete por ID |
-| PUT    | `/reminders/{id}`  | Atualizar lembrete     |
-| DELETE | `/reminders/{id}`  | Remover lembrete       |
+Registros ligados a animais referenciam o animal assim: `{"animal": {"id": 1}, ...}`. Datas usam ISO 8601 (`2026-10-26T00:00:00.000`).
 
 ---
 

@@ -1,6 +1,5 @@
 package com.gestao.leiteira.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -18,11 +17,13 @@ public class Expense {
     @Column(nullable = false)
     private Double valor;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     @Column(nullable = false)
     private LocalDateTime data;
 
     private String categoria;
+
+    /** Origem do lançamento: null = manual; "SAUDE" = gerado por registro de saúde. */
+    private String origem;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -38,4 +39,7 @@ public class Expense {
 
     public String getCategoria() { return categoria; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
+
+    public String getOrigem() { return origem; }
+    public void setOrigem(String origem) { this.origem = origem; }
 }

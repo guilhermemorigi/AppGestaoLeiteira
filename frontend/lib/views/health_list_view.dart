@@ -41,19 +41,21 @@ class _HealthListViewState extends State<HealthListView> {
         _records = data;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
     }
   }
 
-  Future<void> _openForm() async {
+  Future<void> _openForm([HealthRecord? item]) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const HealthFormView()),
+      MaterialPageRoute(builder: (_) => HealthFormView(record: item)),
     );
     if (result == true) _refresh();
   }
@@ -77,14 +79,13 @@ class _HealthListViewState extends State<HealthListView> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _stat('Em andamento', '$emAndamento',
-                            AppTheme.orange),
+                        child: _stat(
+                            'Em andamento', '$emAndamento', AppTheme.orange),
                       ),
-                      Container(
-                          width: 1, height: 36, color: Colors.grey[300]),
+                      Container(width: 1, height: 36, color: Colors.grey[300]),
                       Expanded(
-                        child: _stat('Custo total',
-                            currency.format(custoTotal), AppTheme.red),
+                        child: _stat('Custo total', currency.format(custoTotal),
+                            AppTheme.red),
                       ),
                     ],
                   ),
@@ -108,6 +109,7 @@ class _HealthListViewState extends State<HealthListView> {
                                 margin: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 6),
                                 child: ListTile(
+                                  onTap: () => _openForm(r),
                                   leading: CircleAvatar(
                                     backgroundColor:
                                         AppTheme.red.withOpacity(0.1),
@@ -129,8 +131,8 @@ class _HealthListViewState extends State<HealthListView> {
                                       if (r.medicamento != null &&
                                           r.medicamento!.isNotEmpty)
                                         Text('Med.: ${r.medicamento}',
-                                            style: const TextStyle(
-                                                fontSize: 12)),
+                                            style:
+                                                const TextStyle(fontSize: 12)),
                                       const SizedBox(height: 6),
                                       StatusChip(r.status),
                                     ],
@@ -150,7 +152,7 @@ class _HealthListViewState extends State<HealthListView> {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openForm,
+        onPressed: () => _openForm(),
         icon: const Icon(Icons.add),
         label: const Text('Novo Registro'),
         backgroundColor: AppTheme.red,
@@ -186,10 +188,12 @@ class _HealthListViewState extends State<HealthListView> {
               try {
                 await _apiService.deleteHealth(r.id!);
                 _refresh();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Erro ao excluir.')),
+                    SnackBar(
+                        content: Text(
+                            describeError(e, fallback: 'Erro ao excluir.'))),
                   );
                 }
               }

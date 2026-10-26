@@ -5,7 +5,8 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
 class ReminderFormView extends StatefulWidget {
-  const ReminderFormView({super.key});
+  final Reminder? reminder; // se informado, edição
+  const ReminderFormView({super.key, this.reminder});
 
   @override
   State<ReminderFormView> createState() => _ReminderFormViewState();
@@ -19,6 +20,19 @@ class _ReminderFormViewState extends State<ReminderFormView> {
   DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
 
+  bool get _isEdit => widget.reminder != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final r = widget.reminder;
+    if (r != null) {
+      _tituloController.text = r.titulo;
+      _descricaoController.text = r.descricao;
+      _selectedDate = r.data;
+    }
+  }
+
   @override
   void dispose() {
     _tituloController.dispose();
@@ -30,20 +44,26 @@ class _ReminderFormViewState extends State<ReminderFormView> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSaving = true);
       final reminder = Reminder(
-        titulo: _tituloController.text,
-        descricao: _descricaoController.text,
+        titulo: _tituloController.text.trim(),
+        descricao: _descricaoController.text.trim(),
         data: _selectedDate,
+        concluido: widget.reminder?.concluido ?? false,
       );
 
       try {
-        await _apiService.createReminder(reminder);
+        if (_isEdit) {
+          await _apiService.updateReminder(widget.reminder!.id!, reminder);
+        } else {
+          await _apiService.createReminder(reminder);
+        }
         if (mounted) Navigator.pop(context, true);
-      } catch (_) {
+      } catch (e) {
         if (mounted) {
           setState(() => _isSaving = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Erro ao salvar. Verifique a conexão.')),
+            SnackBar(
+                content: Text(describeError(e,
+                    fallback: 'Erro ao salvar. Verifique a conexão.'))),
           );
         }
       }
@@ -53,7 +73,8 @@ class _ReminderFormViewState extends State<ReminderFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Novo Lembrete'),
+      appBar:
+          CustomAppBar(title: _isEdit ? 'Editar Lembrete' : 'Novo Lembrete'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -86,8 +107,10 @@ class _ReminderFormViewState extends State<ReminderFormView> {
                   final picked = await showDatePicker(
                     context: context,
                     initialDate: _selectedDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(2030),
+                    firstDate: _selectedDate.isBefore(DateTime.now())
+                        ? _selectedDate
+                        : DateTime.now(),
+                    lastDate: DateTime(2035),
                   );
                   if (picked != null) setState(() => _selectedDate = picked);
                 },

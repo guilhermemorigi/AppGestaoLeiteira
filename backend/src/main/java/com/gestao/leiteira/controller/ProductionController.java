@@ -1,42 +1,51 @@
 package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.Production;
-import com.gestao.leiteira.repository.ProductionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.gestao.leiteira.service.ProductionService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/production")
-@CrossOrigin(origins = "*")
 public class ProductionController {
 
-    @Autowired
-    private ProductionRepository repository;
+    private final ProductionService service;
+
+    public ProductionController(ProductionService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<Production> getAll() {
-        return repository.findAll();
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Production getById(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @GetMapping("/animal/{animalId}")
     public List<Production> getByAnimal(@PathVariable Long animalId) {
-        return repository.findByAnimalId(animalId);
+        return service.findByAnimal(animalId);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Production create(@RequestBody Production production) {
-        return repository.save(production);
+        return service.create(production);
+    }
+
+    @PutMapping("/{id}")
+    public Production update(@PathVariable Long id, @RequestBody Production production) {
+        return service.update(id, production);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

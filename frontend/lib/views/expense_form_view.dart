@@ -23,7 +23,8 @@ class _BrazilianCurrencyFormatter extends TextInputFormatter {
 }
 
 class ExpenseFormView extends StatefulWidget {
-  const ExpenseFormView({super.key});
+  final Expense? expense; // se informado, edição
+  const ExpenseFormView({super.key, this.expense});
 
   @override
   State<ExpenseFormView> createState() => _ExpenseFormViewState();
@@ -41,11 +42,28 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
   final List<String> _categories = [
     'Ração',
     'Vacina/Medicamento',
+    'Veterinário',
     'Manutenção',
     'Combustível',
     'Mão de Obra',
     'Outros',
   ];
+
+  bool get _isEdit => widget.expense != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.expense;
+    if (e != null) {
+      _descricaoController.text = e.descricao;
+      _valorController.text = NumberFormat('#,##0.00', 'pt_BR').format(e.valor);
+      _selectedDate = e.data;
+      _selectedCategory = e.categoria;
+      // Categoria antiga/fora da lista continua selecionável na edição
+      if (!_categories.contains(e.categoria)) _categories.add(e.categoria);
+    }
+  }
 
   @override
   void dispose() {
@@ -59,21 +77,26 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
       setState(() => _isSaving = true);
       final digits = _valorController.text.replaceAll(RegExp(r'[^\d]'), '');
       final expense = Expense(
-        descricao: _descricaoController.text,
+        descricao: _descricaoController.text.trim(),
         valor: digits.isEmpty ? 0 : int.parse(digits) / 100,
         data: _selectedDate,
         categoria: _selectedCategory,
       );
 
       try {
-        await _apiService.createExpense(expense);
+        if (_isEdit) {
+          await _apiService.updateExpense(widget.expense!.id!, expense);
+        } else {
+          await _apiService.createExpense(expense);
+        }
         if (mounted) Navigator.pop(context, true);
-      } catch (_) {
+      } catch (e) {
         if (mounted) {
           setState(() => _isSaving = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Erro ao salvar. Verifique a conexão.')),
+            SnackBar(
+                content: Text(describeError(e,
+                    fallback: 'Erro ao salvar. Verifique a conexão.'))),
           );
         }
       }
@@ -83,7 +106,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Lançar Gasto'),
+      appBar: CustomAppBar(title: _isEdit ? 'Editar Gasto' : 'Lançar Gasto'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -126,9 +149,13 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [_BrazilianCurrencyFormatter()],
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Campo obrigatório';
+                  if (value == null || value.isEmpty) {
+                    return 'Campo obrigatório';
+                  }
                   final digits = value.replaceAll(RegExp(r'[^\d]'), '');
-                  if (digits.isEmpty || int.parse(digits) == 0) return 'Informe um valor';
+                  if (digits.isEmpty || int.parse(digits) == 0) {
+                    return 'Informe um valor';
+                  }
                   return null;
                 },
               ),

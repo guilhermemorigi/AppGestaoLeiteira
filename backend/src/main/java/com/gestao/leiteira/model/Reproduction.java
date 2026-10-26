@@ -1,6 +1,5 @@
 package com.gestao.leiteira.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -19,13 +18,11 @@ public class Reproduction {
     @Column(nullable = false)
     private String tipo; // Cio, Cobertura, Inseminação, Diagnóstico Gestação, Parto
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     @Column(nullable = false)
     private LocalDateTime data;
 
     private String touro; // identificação do touro ou sêmen
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime previsaoParto;
 
     private String status = "Pendente"; // Pendente, Confirmada, Prenhe, Vazia, Parida

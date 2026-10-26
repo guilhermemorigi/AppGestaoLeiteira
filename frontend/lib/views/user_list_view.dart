@@ -32,11 +32,13 @@ class _UserListViewState extends State<UserListView> {
         _users = data;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
     }
   }
@@ -74,25 +76,22 @@ class _UserListViewState extends State<UserListView> {
                         child: ListTile(
                           onTap: () => _openForm(user: u),
                           leading: CircleAvatar(
-                            backgroundColor: (isAdmin
-                                    ? AppTheme.orange
-                                    : AppTheme.primary)
-                                .withOpacity(0.15),
+                            backgroundColor:
+                                (isAdmin ? AppTheme.orange : AppTheme.primary)
+                                    .withOpacity(0.15),
                             child: Icon(
                               isAdmin
                                   ? Icons.admin_panel_settings
                                   : Icons.person,
-                              color: isAdmin
-                                  ? AppTheme.orange
-                                  : AppTheme.primary,
+                              color:
+                                  isAdmin ? AppTheme.orange : AppTheme.primary,
                             ),
                           ),
                           title: Text(
                             u.nomeCompleto?.isNotEmpty == true
                                 ? u.nomeCompleto!
                                 : u.username,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +103,8 @@ class _UserListViewState extends State<UserListView> {
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  StatusChip(isAdmin ? 'Administrador' : 'Operador'),
+                                  StatusChip(
+                                      isAdmin ? 'Administrador' : 'Operador'),
                                   const SizedBox(width: 6),
                                   if (!u.ativo)
                                     Container(
@@ -159,10 +159,12 @@ class _UserListViewState extends State<UserListView> {
               try {
                 await _apiService.deleteUser(u.id!);
                 _refresh();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Erro ao excluir.')),
+                    SnackBar(
+                        content: Text(
+                            describeError(e, fallback: 'Erro ao excluir.'))),
                   );
                 }
               }

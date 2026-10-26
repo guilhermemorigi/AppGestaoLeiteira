@@ -1,66 +1,52 @@
 package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.StockItem;
-import com.gestao.leiteira.repository.StockItemRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.gestao.leiteira.service.StockItemService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/stock")
-@CrossOrigin(origins = "*")
 public class StockItemController {
 
-    @Autowired
-    private StockItemRepository repository;
+    private final StockItemService service;
+
+    public StockItemController(StockItemService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<StockItem> getAll() {
-        return repository.findAll();
+        return service.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StockItem> getById(@PathVariable Long id) {
-        return repository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public StockItem getById(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public StockItem create(@RequestBody StockItem item) {
-        return repository.save(item);
+        return service.create(item);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StockItem> update(@PathVariable Long id, @RequestBody StockItem item) {
-        return repository.findById(id)
-                .map(existing -> {
-                    item.setId(id);
-                    return ResponseEntity.ok(repository.save(item));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public StockItem update(@PathVariable Long id, @RequestBody StockItem item) {
+        return service.update(id, item);
     }
 
+    /** Entrada (delta positivo) ou saída (delta negativo) de estoque. */
     @PatchMapping("/{id}/quantidade")
-    public ResponseEntity<StockItem> adjustQuantity(@PathVariable Long id, @RequestParam Double delta) {
-        return repository.findById(id)
-                .map(item -> {
-                    double atual = item.getQuantidade() == null ? 0 : item.getQuantidade();
-                    double novo = atual + delta;
-                    item.setQuantidade(novo < 0 ? 0 : novo);
-                    return ResponseEntity.ok(repository.save(item));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public StockItem adjustQuantity(@PathVariable Long id, @RequestParam double delta) {
+        return service.adjustQuantity(id, delta);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

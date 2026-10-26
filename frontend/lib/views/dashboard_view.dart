@@ -40,11 +40,13 @@ class _DashboardViewState extends State<DashboardView> {
       final productions = await _apiService.getAllProduction();
       _allProductions = productions;
       _computeStats();
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao carregar dados do servidor.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao carregar dados do servidor.'))),
         );
       }
     }

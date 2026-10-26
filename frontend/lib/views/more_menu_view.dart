@@ -25,16 +25,16 @@ class MoreMenuView extends StatelessWidget {
     final entries = <_MenuEntry>[
       const _MenuEntry('Saúde & Tratamentos', 'Doenças, exames e cuidados',
           Icons.health_and_safety, AppTheme.red, HealthListView()),
-      const _MenuEntry('Vacinação', 'Calendário e doses',
-          Icons.vaccines, AppTheme.teal, VaccineListView()),
-      const _MenuEntry('Reprodução', 'Cio, gestação e partos',
-          Icons.favorite, AppTheme.purple, ReproductionListView()),
+      const _MenuEntry('Vacinação', 'Calendário e doses', Icons.vaccines,
+          AppTheme.teal, VaccineListView()),
+      const _MenuEntry('Reprodução', 'Cio, gestação e partos', Icons.favorite,
+          AppTheme.purple, ReproductionListView()),
       const _MenuEntry('Estoque', 'Ração, insumos e medicamentos',
           Icons.inventory_2, AppTheme.primary, StockListView()),
       const _MenuEntry('Agenda / Manejo', 'Lembretes e tarefas',
           Icons.calendar_month, AppTheme.blue, ReminderListView()),
-      const _MenuEntry('Usuários', 'Controle de acesso',
-          Icons.group, AppTheme.orange, UserListView()),
+      const _MenuEntry('Usuários', 'Controle de acesso', Icons.group,
+          AppTheme.orange, UserListView()),
     ];
 
     return Scaffold(

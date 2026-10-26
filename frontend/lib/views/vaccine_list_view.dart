@@ -33,19 +33,21 @@ class _VaccineListViewState extends State<VaccineListView> {
         _vaccines = data;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
     }
   }
 
-  Future<void> _openForm() async {
+  Future<void> _openForm([Vaccine? item]) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const VaccineFormView()),
+      MaterialPageRoute(builder: (_) => VaccineFormView(vaccine: item)),
     );
     if (result == true) _refresh();
   }
@@ -107,6 +109,7 @@ class _VaccineListViewState extends State<VaccineListView> {
                                 margin: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 6),
                                 child: ListTile(
+                                  onTap: () => _openForm(v),
                                   leading: CircleAvatar(
                                     backgroundColor:
                                         AppTheme.teal.withOpacity(0.12),
@@ -161,7 +164,7 @@ class _VaccineListViewState extends State<VaccineListView> {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openForm,
+        onPressed: () => _openForm(),
         icon: const Icon(Icons.add),
         label: const Text('Nova Vacina'),
         backgroundColor: AppTheme.teal,
@@ -174,7 +177,8 @@ class _VaccineListViewState extends State<VaccineListView> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Excluir Vacina'),
-        content: Text('Deseja excluir a vacina "${v.nome}" de ${v.animalNome}?'),
+        content:
+            Text('Deseja excluir a vacina "${v.nome}" de ${v.animalNome}?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -185,10 +189,12 @@ class _VaccineListViewState extends State<VaccineListView> {
               try {
                 await _apiService.deleteVaccine(v.id!);
                 _refresh();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Erro ao excluir.')),
+                    SnackBar(
+                        content: Text(
+                            describeError(e, fallback: 'Erro ao excluir.'))),
                   );
                 }
               }

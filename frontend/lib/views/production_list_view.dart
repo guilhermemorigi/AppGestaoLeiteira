@@ -35,16 +35,18 @@ class _ProductionListViewState extends State<ProductionListView> {
         _animalsAvailable = animals;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
       );
     }
   }
 
-  Future<void> _navigateToForm() async {
+  Future<void> _navigateToForm([Production? production]) async {
     if (_animalsAvailable.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cadastre um animal primeiro!')),
@@ -54,7 +56,8 @@ class _ProductionListViewState extends State<ProductionListView> {
 
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const ProductionFormView()),
+      MaterialPageRoute(
+          builder: (context) => ProductionFormView(production: production)),
     );
 
     if (result == true) {
@@ -78,6 +81,7 @@ class _ProductionListViewState extends State<ProductionListView> {
                     itemBuilder: (context, index) {
                       final p = _productions[index];
                       return ListTile(
+                        onTap: () => _navigateToForm(p),
                         leading:
                             const Icon(Icons.water_drop, color: Colors.blue),
                         title: Text(
@@ -93,7 +97,7 @@ class _ProductionListViewState extends State<ProductionListView> {
                   ),
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToForm,
+        onPressed: () => _navigateToForm(),
         label: const Text('Lançar Produção'),
         icon: const Icon(Icons.add),
       ),
@@ -103,25 +107,27 @@ class _ProductionListViewState extends State<ProductionListView> {
   void _confirmDelete(Production p) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Excluir Registro'),
         content:
             const Text('Deseja realmente excluir este registro de produção?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancelar')),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               try {
                 await _apiService.deleteProduction(p.id!);
                 _refreshData();
-              } catch (_) {
+              } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Erro ao excluir. Verifique a conexão.')),
+                    SnackBar(
+                        content: Text(describeError(e,
+                            fallback:
+                                'Erro ao excluir. Verifique a conexão.'))),
                   );
                 }
               }

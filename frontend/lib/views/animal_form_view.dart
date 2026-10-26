@@ -81,11 +81,13 @@ class _AnimalFormViewState extends State<AnimalFormView> {
         await _apiService.createAnimal(animal);
       }
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao salvar. Verifique a conexão.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao salvar. Verifique a conexão.'))),
         );
       }
     }
@@ -94,7 +96,8 @@ class _AnimalFormViewState extends State<AnimalFormView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(title: _isEdit ? 'Editar Animal' : 'Cadastrar Animal'),
+      appBar:
+          CustomAppBar(title: _isEdit ? 'Editar Animal' : 'Cadastrar Animal'),
       body: _isSaving
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -160,8 +163,8 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                               prefixIcon: Icon(Icons.wc),
                             ),
                             items: const ['Fêmea', 'Macho']
-                                .map((s) => DropdownMenuItem(
-                                    value: s, child: Text(s)))
+                                .map((s) =>
+                                    DropdownMenuItem(value: s, child: Text(s)))
                                 .toList(),
                             onChanged: (v) => setState(() => _sexo = v!),
                           ),
@@ -188,8 +191,8 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                         prefixIcon: Icon(Icons.flag),
                       ),
                       items: _statuses
-                          .map((s) =>
-                              DropdownMenuItem(value: s, child: Text(s)))
+                          .map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (v) => setState(() => _status = v!),
                     ),
@@ -227,7 +230,8 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                     ElevatedButton.icon(
                       onPressed: _save,
                       icon: const Icon(Icons.save),
-                      label: Text(_isEdit ? 'Salvar Alterações' : 'Salvar Animal'),
+                      label:
+                          Text(_isEdit ? 'Salvar Alterações' : 'Salvar Animal'),
                     ),
                   ],
                 ),

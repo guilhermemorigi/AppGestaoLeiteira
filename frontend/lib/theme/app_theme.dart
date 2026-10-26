@@ -240,8 +240,8 @@ class StatusChip extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
       ),
     );
   }

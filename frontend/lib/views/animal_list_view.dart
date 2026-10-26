@@ -32,11 +32,13 @@ class _AnimalListViewState extends State<AnimalListView> {
         _animals = data;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao conectar com o servidor.')),
+          SnackBar(
+              content: Text(describeError(e,
+                  fallback: 'Erro ao conectar com o servidor.'))),
         );
       }
     }
@@ -127,7 +129,9 @@ class _AnimalListViewState extends State<AnimalListView> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Excluir Animal'),
         content: Text(
-            'Deseja realmente excluir ${animal.nome}? Isso removerá todo o histórico de produção deste animal.'),
+            'Deseja realmente excluir ${animal.nome}? Animais com histórico '
+            '(produção, saúde, vacinas ou reprodução) não podem ser excluídos; '
+            'nesse caso altere o status para Vendido ou Morto.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -142,10 +146,11 @@ class _AnimalListViewState extends State<AnimalListView> {
                 messenger.showSnackBar(
                   const SnackBar(content: Text('Animal excluído com sucesso')),
                 );
-              } catch (_) {
+              } catch (e) {
                 messenger.showSnackBar(
-                  const SnackBar(
-                      content: Text('Erro ao excluir. Verifique a conexão.')),
+                  SnackBar(
+                      content: Text(describeError(e,
+                          fallback: 'Erro ao excluir. Verifique a conexão.'))),
                 );
               }
             },
