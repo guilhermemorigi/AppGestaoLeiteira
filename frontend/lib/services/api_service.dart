@@ -40,17 +40,27 @@ class ApiService {
   /// testes (ex.: MockClient do pacote http) para simular o backend.
   static http.Client client = http.Client();
 
+  /// Avisa que algum dado foi criado, alterado ou excluído. As abas principais
+  /// ficam vivas na navegação e escutam este aviso para se recarregar.
+  static final alteracoes = ValueNotifier<int>(0);
+
   static const _timeout = Duration(seconds: 15);
   static const _jsonHeaders = {'Content-Type': 'application/json'};
+
+  /// Respostas maiores que isso são convertidas fora da thread da interface,
+  /// para a tela não congelar enquanto processa listas grandes.
+  static const _limiteParseEmSegundoPlano = 32 * 1024;
 
   // --- INFRAESTRUTURA HTTP ---
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
-  Future<dynamic> _send(Future<http.Response> request) async {
+  Future<dynamic> _send(Future<http.Response> request,
+      {bool alteraDados = false}) async {
     final response = await request.timeout(_timeout);
     final body = utf8.decode(response.bodyBytes);
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (alteraDados) alteracoes.value++;
       return body.isEmpty ? null : jsonDecode(body);
     }
     throw ApiException(response.statusCode, _extractMessage(body));
@@ -68,21 +78,35 @@ class ApiService {
 
   Future<dynamic> _get(String path) => _send(client.get(_uri(path)));
 
-  Future<dynamic> _post(String path, [Object? body]) =>
-      _send(client.post(_uri(path),
-          headers: _jsonHeaders, body: body == null ? null : jsonEncode(body)));
+  Future<dynamic> _post(String path, [Object? body, bool alteraDados = true]) =>
+      _send(
+          client.post(_uri(path),
+              headers: _jsonHeaders,
+              body: body == null ? null : jsonEncode(body)),
+          alteraDados: alteraDados);
 
   Future<dynamic> _put(String path, Object body) => _send(
-      client.put(_uri(path), headers: _jsonHeaders, body: jsonEncode(body)));
+      client.put(_uri(path), headers: _jsonHeaders, body: jsonEncode(body)),
+      alteraDados: true);
 
-  Future<dynamic> _patch(String path) => _send(client.patch(_uri(path)));
+  Future<dynamic> _patch(String path) =>
+      _send(client.patch(_uri(path)), alteraDados: true);
 
-  Future<void> _delete(String path) => _send(client.delete(_uri(path)));
+  Future<void> _delete(String path) =>
+      _send(client.delete(_uri(path)), alteraDados: true);
 
   Future<List<T>> _getList<T>(
       String path, T Function(Map<String, dynamic>) fromMap) async {
-    final List<dynamic> body = await _get(path);
-    return body.map((item) => fromMap(item as Map<String, dynamic>)).toList();
+    final response = await client.get(_uri(path)).timeout(_timeout);
+    final bytes = response.bodyBytes;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+          response.statusCode, _extractMessage(utf8.decode(bytes)));
+    }
+    if (bytes.length < _limiteParseEmSegundoPlano) {
+      return _parseLista((bytes, fromMap));
+    }
+    return compute(_parseLista<T>, (bytes, fromMap));
   }
 
   // --- USUÁRIOS / AUTENTICAÇÃO ---
@@ -91,7 +115,7 @@ class ApiService {
   /// (credenciais inválidas, usuário inativo, etc.).
   Future<User> login(String username, String password) async {
     return User.fromMap(await _post(
-        '/users/login', {'username': username, 'password': password}));
+        '/users/login', {'username': username, 'password': password}, false));
   }
 
   /// Cadastro público (tela "Cadastre-se"): o servidor define o perfil.
@@ -126,8 +150,13 @@ class ApiService {
 
   // --- PRODUÇÃO ---
 
-  Future<List<Production>> getAllProduction() =>
-      _getList('/production', Production.fromMap);
+  /// [desde] limita aos registros a partir dessa data (evita baixar todo o
+  /// histórico quando a tela só precisa de um período).
+  Future<List<Production>> getAllProduction({DateTime? desde}) => _getList(
+      desde == null
+          ? '/production'
+          : '/production?desde=${desde.toIso8601String().substring(0, 10)}',
+      Production.fromMap);
 
   Future<List<Production>> getProductionByAnimal(int animalId) =>
       _getList('/production/animal/$animalId', Production.fromMap);
@@ -232,4 +261,12 @@ class ApiService {
       Reproduction.fromMap(await _put('/reproduction/$id', r.toJson()));
 
   Future<void> deleteReproduction(int id) => _delete('/reproduction/$id');
+}
+
+/// Converte o JSON de uma lista em models. Função de nível superior para
+/// poder rodar num isolate (compute) sem acessar o estado da interface.
+List<T> _parseLista<T>((Uint8List, T Function(Map<String, dynamic>)) args) {
+  final (bytes, fromMap) = args;
+  final lista = jsonDecode(utf8.decode(bytes)) as List<dynamic>;
+  return [for (final item in lista) fromMap(item as Map<String, dynamic>)];
 }

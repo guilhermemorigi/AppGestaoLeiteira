@@ -1,5 +1,6 @@
 package com.gestao.leiteira.model;
 
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -13,6 +14,9 @@ public class Production {
 
     @ManyToOne
     @JoinColumn(name = "animal_id", nullable = false)
+    // Nas listagens basta identificar o animal: evita repetir o cadastro
+    // completo em cada registro (respostas bem menores)
+    @JsonIncludeProperties({"id", "nome"})
     private Animal animal;
 
     @Column(nullable = false)

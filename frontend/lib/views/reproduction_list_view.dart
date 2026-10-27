@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
@@ -17,12 +18,12 @@ class _ReproductionListViewState extends State<ReproductionListView> {
   bool _isLoading = true;
   final _apiService = ApiService();
 
-  final _tipoIcons = const {
+  final _tipoIcons = {
     'Cio': Icons.favorite,
     'Cobertura': Icons.male,
     'Inseminação': Icons.science,
-    'Diagnóstico Gestação': Icons.pregnant_woman,
-    'Parto': Icons.child_friendly,
+    'Diagnóstico Gestação': MdiIcons.stethoscope,
+    'Parto': MdiIcons.cow,
   };
 
   @override

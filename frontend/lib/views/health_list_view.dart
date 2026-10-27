@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
@@ -17,8 +18,8 @@ class _HealthListViewState extends State<HealthListView> {
   bool _isLoading = true;
   final _apiService = ApiService();
 
-  final _tipoIcons = const {
-    'Doença': Icons.sick,
+  final _tipoIcons = {
+    'Doença': MdiIcons.thermometer,
     'Tratamento': Icons.healing,
     'Exame': Icons.biotech,
     'Cirurgia': Icons.medical_services,

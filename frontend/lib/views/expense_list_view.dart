@@ -20,10 +20,25 @@ class _ExpenseListViewState extends State<ExpenseListView> {
   @override
   void initState() {
     super.initState();
+    // Aba fica viva na navegação: recarrega quando qualquer dado muda
+    ApiService.alteracoes.addListener(_refreshData);
     _refreshData();
   }
 
-  Future<void> _refreshData() async {
+  @override
+  void dispose() {
+    ApiService.alteracoes.removeListener(_refreshData);
+    super.dispose();
+  }
+
+  /// Carga em andamento: chamadas simultâneas (aviso de alteração + retorno
+  /// de um formulário) reaproveitam a mesma requisição em vez de repetir.
+  Future<void>? _cargaAtual;
+
+  Future<void> _refreshData() =>
+      _cargaAtual ??= _carregar().whenComplete(() => _cargaAtual = null);
+
+  Future<void> _carregar() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {

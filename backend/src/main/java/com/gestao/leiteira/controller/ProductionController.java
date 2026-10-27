@@ -2,9 +2,11 @@ package com.gestao.leiteira.controller;
 
 import com.gestao.leiteira.model.Production;
 import com.gestao.leiteira.service.ProductionService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -18,8 +20,10 @@ public class ProductionController {
     }
 
     @GetMapping
-    public List<Production> getAll() {
-        return service.findAll();
+    /** ?desde=yyyy-MM-dd limita ao período (usado pelo dashboard). */
+    public List<Production> getAll(@RequestParam(required = false)
+                                   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde) {
+        return service.findAll(desde);
     }
 
     @GetMapping("/{id}")

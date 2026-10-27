@@ -20,15 +20,36 @@ class _ProductionListViewState extends State<ProductionListView> {
   @override
   void initState() {
     super.initState();
+    // Aba fica viva na navegação: recarrega quando qualquer dado muda
+    ApiService.alteracoes.addListener(_refreshData);
     _refreshData();
   }
 
-  Future<void> _refreshData() async {
+  @override
+  void dispose() {
+    ApiService.alteracoes.removeListener(_refreshData);
+    super.dispose();
+  }
+
+  /// Carga em andamento: chamadas simultâneas (aviso de alteração + retorno
+  /// de um formulário) reaproveitam a mesma requisição em vez de repetir.
+  Future<void>? _cargaAtual;
+
+  Future<void> _refreshData() =>
+      _cargaAtual ??= _carregar().whenComplete(() => _cargaAtual = null);
+
+  Future<void> _carregar() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final productions = await _apiService.getAllProduction();
-      final animals = await _apiService.getAllAnimals();
+      // Em paralelo; Future.wait repassa o 1º erro original e trata os demais
+      // (nenhum erro fica "solto" sem tratamento)
+      final resultados = await Future.wait([
+        _apiService.getAllProduction(),
+        _apiService.getAllAnimals(),
+      ]);
+      final productions = resultados[0] as List<Production>;
+      final animals = resultados[1] as List<Animal>;
       if (!mounted) return;
       setState(() {
         _productions = productions;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
@@ -205,7 +206,7 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                           firstDate: DateTime(2020),
                           lastDate: DateTime(2035),
                         );
-                        if (picked != null) {
+                        if (picked != null && mounted) {
                           setState(() => _data = picked);
                           _sugerirPrevisaoParto();
                         }
@@ -237,14 +238,14 @@ class _ReproductionFormViewState extends State<ReproductionFormView> {
                             firstDate: DateTime(2020),
                             lastDate: DateTime(2035),
                           );
-                          if (picked != null) {
+                          if (picked != null && mounted) {
                             setState(() => _previsaoParto = picked);
                           }
                         },
                         child: InputDecorator(
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Previsão de parto',
-                            prefixIcon: Icon(Icons.child_friendly),
+                            prefixIcon: Icon(MdiIcons.calendarClock),
                             helperText: 'Calculada automaticamente (~283 dias)',
                           ),
                           child: Row(

@@ -212,7 +212,9 @@ class _StockFormViewState extends State<StockFormView> {
                     firstDate: DateTime(2020),
                     lastDate: DateTime(2035),
                   );
-                  if (picked != null) setState(() => _validade = picked);
+                  if (picked != null && mounted) {
+                    setState(() => _validade = picked);
+                  }
                 },
                 child: InputDecorator(
                   decoration: const InputDecoration(

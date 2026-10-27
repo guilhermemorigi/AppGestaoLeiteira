@@ -21,26 +21,43 @@ class _AnimalListViewState extends State<AnimalListView> {
   @override
   void initState() {
     super.initState();
+    // Aba fica viva na navegação: recarrega quando qualquer dado muda
+    ApiService.alteracoes.addListener(_refreshAnimals);
     _refreshAnimals();
   }
 
-  Future<void> _refreshAnimals() async {
+  @override
+  void dispose() {
+    ApiService.alteracoes.removeListener(_refreshAnimals);
+    super.dispose();
+  }
+
+  /// Carga em andamento: chamadas simultâneas (aviso de alteração + retorno
+  /// de um formulário) reaproveitam a mesma requisição em vez de repetir.
+  Future<void>? _cargaAtual;
+
+  Future<void> _refreshAnimals() =>
+      _cargaAtual ??= _carregar().whenComplete(() => _cargaAtual = null);
+
+  Future<void> _carregar() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final data = await _apiService.getAllAnimals();
+      // A tela pode ter sido fechada enquanto a API respondia
+      if (!mounted) return;
       setState(() {
         _animals = data;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(describeError(e,
-                  fallback: 'Erro ao conectar com o servidor.'))),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(describeError(e,
+                fallback: 'Erro ao conectar com o servidor.'))),
+      );
     }
   }
 

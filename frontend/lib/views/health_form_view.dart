@@ -225,7 +225,7 @@ class _HealthFormViewState extends State<HealthFormView> {
                                 firstDate: DateTime(2020),
                                 lastDate: DateTime.now(),
                               );
-                              if (picked != null) {
+                              if (picked != null && mounted) {
                                 setState(() => _data = picked);
                               }
                             },

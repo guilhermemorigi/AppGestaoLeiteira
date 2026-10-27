@@ -171,7 +171,9 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now(),
                   );
-                  if (picked != null) setState(() => _selectedDate = picked);
+                  if (picked != null && mounted) {
+                    setState(() => _selectedDate = picked);
+                  }
                 },
                 child: InputDecorator(
                   decoration: const InputDecoration(

@@ -112,7 +112,9 @@ class _ReminderFormViewState extends State<ReminderFormView> {
                         : DateTime.now(),
                     lastDate: DateTime(2035),
                   );
-                  if (picked != null) setState(() => _selectedDate = picked);
+                  if (picked != null && mounted) {
+                    setState(() => _selectedDate = picked);
+                  }
                 },
                 child: InputDecorator(
                   decoration: const InputDecoration(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
@@ -159,9 +160,9 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                           child: DropdownButtonFormField<String>(
                             isExpanded: true,
                             value: _sexo,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Sexo',
-                              prefixIcon: Icon(Icons.wc),
+                              prefixIcon: Icon(MdiIcons.genderMaleFemale),
                             ),
                             items: const ['Fêmea', 'Macho']
                                 .map((s) => DropdownMenuItem(
@@ -210,7 +211,7 @@ class _AnimalFormViewState extends State<AnimalFormView> {
                           firstDate: DateTime(2005),
                           lastDate: DateTime.now(),
                         );
-                        if (picked != null) {
+                        if (picked != null && mounted) {
                           setState(() => _dataNascimento = picked);
                         }
                       },

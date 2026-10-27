@@ -214,7 +214,7 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                           firstDate: DateTime(2020),
                           lastDate: DateTime.now(),
                         );
-                        if (picked != null) {
+                        if (picked != null && mounted) {
                           setState(() => _dataAplicacao = picked);
                         }
                       },
@@ -237,7 +237,7 @@ class _VaccineFormViewState extends State<VaccineFormView> {
                           firstDate: _dataAplicacao,
                           lastDate: DateTime(2035),
                         );
-                        if (picked != null) {
+                        if (picked != null && mounted) {
                           setState(() => _proximaDose = picked);
                         }
                       },

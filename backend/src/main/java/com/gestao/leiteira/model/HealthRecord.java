@@ -1,5 +1,6 @@
 package com.gestao.leiteira.model;
 
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -16,6 +17,9 @@ public class HealthRecord {
 
     @ManyToOne
     @JoinColumn(name = "animal_id", nullable = false)
+    // Nas listagens basta identificar o animal: evita repetir o cadastro
+    // completo em cada registro (respostas bem menores)
+    @JsonIncludeProperties({"id", "nome"})
     private Animal animal;
 
     @Column(nullable = false)

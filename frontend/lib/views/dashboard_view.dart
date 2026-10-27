@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -13,15 +15,29 @@ class DashboardView extends StatefulWidget {
 }
 
 class _DashboardViewState extends State<DashboardView> {
+  // Litros sempre com 1 casa decimal no formato brasileiro (ex.: 1.234,5 L)
+  static final _litros =
+      NumberFormat.decimalPatternDigits(locale: 'pt_BR', decimalDigits: 1);
+  static final _eixo = NumberFormat.decimalPattern('pt_BR');
+  static String _l(double valor) => '${_litros.format(valor)} L';
+  // Formatadores criados uma vez só (criar DateFormat por item é caro)
+  static final _diaMes = DateFormat('dd/MM');
+  static final _dataCompleta = DateFormat('dd/MM/yyyy');
+
   double _totalGeral = 0;
   double _averageProduction = 0;
   String _topAnimal = "---";
   double _topAnimalQty = 0;
 
-  Map<String, double> _dailyTotals = {};
+  /// Produção agrupada por dia (data sem hora). Montada uma vez por carga da
+  /// API; trocar de filtro só recorta o intervalo de dias.
+  Map<DateTime, List<Production>> _porDia = {};
+
+  /// Dias do filtro atual, do mais recente para o mais antigo (histórico).
+  List<DateTime> _diasPeriodo = [];
+  Map<DateTime, double> _totaisPorDia = {};
   List<FlSpot> _chartData = [];
   List<String> _chartLabels = [];
-  List<Production> _allProductions = [];
 
   String _currentFilter = '7d';
   bool _isLoading = true;
@@ -30,15 +46,42 @@ class _DashboardViewState extends State<DashboardView> {
   @override
   void initState() {
     super.initState();
+    // Aba fica viva na navegação: recarrega quando qualquer dado muda
+    ApiService.alteracoes.addListener(_loadData);
     _loadData();
   }
 
-  Future<void> _loadData() async {
+  @override
+  void dispose() {
+    ApiService.alteracoes.removeListener(_loadData);
+    super.dispose();
+  }
+
+  /// Carga em andamento: chamadas simultâneas (aviso de alteração + retorno
+  /// de um formulário) reaproveitam a mesma requisição em vez de repetir.
+  Future<void>? _cargaAtual;
+
+  Future<void> _loadData() =>
+      _cargaAtual ??= _carregar().whenComplete(() => _cargaAtual = null);
+
+  Future<void> _carregar() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final productions = await _apiService.getAllProduction();
-      _allProductions = productions;
+      // Baixa só o período que o dashboard exibe: o mais longo entre
+      // "30 dias" e "mês atual" (e não todo o histórico de produção)
+      final agora = DateTime.now();
+      final trintaDias = DateTime(agora.year, agora.month, agora.day - 29);
+      final inicioMes = DateTime(agora.year, agora.month, 1);
+      final productions = await _apiService.getAllProduction(
+          desde: trintaDias.isBefore(inicioMes) ? trintaDias : inicioMes);
+      final porDia = <DateTime, List<Production>>{};
+      for (final p in productions) {
+        final dia = DateTime(p.data.year, p.data.month, p.data.day);
+        (porDia[dia] ??= []).add(p);
+      }
+      _porDia = porDia;
+      if (!mounted) return;
       _computeStats();
     } catch (e) {
       if (mounted) {
@@ -53,81 +96,69 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   void _computeStats() {
-    final now = DateTime.now();
-    DateTime start;
+    final agora = DateTime.now();
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final inicio = switch (_currentFilter) {
+      '7d' => DateTime(hoje.year, hoje.month, hoje.day - 6),
+      '30d' => DateTime(hoje.year, hoje.month, hoje.day - 29),
+      _ => DateTime(hoje.year, hoje.month, 1),
+    };
 
-    if (_currentFilter == '7d') {
-      start = now.subtract(const Duration(days: 6));
-    } else if (_currentFilter == '30d') {
-      start = now.subtract(const Duration(days: 29));
-    } else {
-      start = DateTime(now.year, now.month, 1);
-    }
+    // Só os dias do período (comparação de DateTime, sem converter em texto)
+    final dias = _porDia.keys
+        .where((d) => !d.isBefore(inicio) && !d.isAfter(hoje))
+        .toList()
+      ..sort();
 
-    final startDay = DateFormat('yyyy-MM-dd').format(start);
-    final endDay = DateFormat('yyyy-MM-dd').format(now);
-
-    final filtered = _allProductions.where((p) {
-      final pDay = DateFormat('yyyy-MM-dd').format(p.data);
-      return pDay.compareTo(startDay) >= 0 && pDay.compareTo(endDay) <= 0;
-    }).toList();
-
-    final Map<String, double> daily = {};
-    for (var p in filtered) {
-      final day = DateFormat('yyyy-MM-dd').format(p.data);
-      daily[day] = (daily[day] ?? 0) + p.quantidade;
-    }
-
-    final total = filtered.fold(0.0, (sum, p) => sum + p.quantidade);
-
-    final Map<String, double> animalTotals = {};
-    final Map<String, String> animalNames = {};
-    for (var p in filtered) {
-      final key = p.animalId.toString();
-      animalTotals[key] = (animalTotals[key] ?? 0) + p.quantidade;
-      animalNames[key] = p.animalNome;
+    final totais = <DateTime, double>{};
+    final totalPorAnimal = <int, double>{};
+    final nomes = <int, String>{};
+    var total = 0.0;
+    for (final dia in dias) {
+      var soma = 0.0;
+      for (final p in _porDia[dia]!) {
+        soma += p.quantidade;
+        totalPorAnimal[p.animalId] =
+            (totalPorAnimal[p.animalId] ?? 0) + p.quantidade;
+        nomes[p.animalId] = p.animalNome;
+      }
+      totais[dia] = soma;
+      total += soma;
     }
 
     String topAnimalName = "---";
     double topAnimalQty = 0;
-    if (animalTotals.isNotEmpty) {
+    if (totalPorAnimal.isNotEmpty) {
       final top =
-          animalTotals.entries.reduce((a, b) => a.value > b.value ? a : b);
-      topAnimalName = animalNames[top.key] ?? "---";
+          totalPorAnimal.entries.reduce((a, b) => a.value > b.value ? a : b);
+      topAnimalName = nomes[top.key] ?? "---";
       topAnimalQty = top.value;
-    }
-
-    final sortedKeys = daily.keys.toList()..sort();
-    final spots = <FlSpot>[];
-    final labels = <String>[];
-    for (int i = 0; i < sortedKeys.length; i++) {
-      spots.add(FlSpot(i.toDouble(), daily[sortedKeys[i]]!));
-      labels.add(DateFormat('dd/MM').format(DateTime.parse(sortedKeys[i])));
     }
 
     setState(() {
       _totalGeral = total;
-      _dailyTotals = daily;
-      _chartData = spots;
-      _chartLabels = labels;
-      _averageProduction = daily.isEmpty ? 0 : total / daily.length;
+      _totaisPorDia = totais;
+      _diasPeriodo = dias.reversed.toList();
+      _chartData = [
+        for (var i = 0; i < dias.length; i++)
+          FlSpot(i.toDouble(), totais[dias[i]]!)
+      ];
+      _chartLabels = [for (final d in dias) _diaMes.format(d)];
+      _averageProduction = dias.isEmpty ? 0 : total / dias.length;
       _topAnimal = topAnimalName;
       _topAnimalQty = topAnimalQty;
       _isLoading = false;
     });
   }
 
-  void _showDetailsDialog(String dateStr, String formattedDate) {
-    final details = _allProductions
-        .where((p) => DateFormat('yyyy-MM-dd').format(p.data) == dateStr)
-        .toList();
-    final numberFormat = NumberFormat.decimalPattern('pt_BR');
+  void _showDetailsDialog(DateTime dia) {
+    final details = _porDia[dia] ?? const <Production>[];
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: Text('Detalhes: $formattedDate'),
+        title: Text('Detalhes: ${_dataCompleta.format(dia)}'),
         content: SizedBox(
           width: double.maxFinite,
           child: details.isEmpty
@@ -142,7 +173,7 @@ class _DashboardViewState extends State<DashboardView> {
                       title: Text(item.animalNome,
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                       trailing: Text(
-                        '${numberFormat.format(item.quantidade)} L',
+                        _l(item.quantidade),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     );
@@ -160,124 +191,132 @@ class _DashboardViewState extends State<DashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    final numberFormat = NumberFormat.decimalPattern('pt_BR');
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+              child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Wrap: os filtros descem para a linha de baixo se não couberem
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _buildFilterButton('7 Dias', '7d'),
-                        _buildFilterButton('30 Dias', '30d'),
-                        _buildFilterButton('Mês Atual', 'mes'),
-                      ],
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    sliver: SliverToBoxAdapter(child: _buildResumo()),
+                  ),
+                  // Histórico montado sob demanda: só os cards visíveis são criados
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    sliver: SliverList.builder(
+                      itemCount: _diasPeriodo.length,
+                      itemBuilder: (context, i) =>
+                          _buildDiaCard(_diasPeriodo[i]),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        _buildSummaryCard(
-                          "TOTAL PERÍODO",
-                          "${numberFormat.format(_totalGeral)} L",
-                          Colors.green,
-                          Icons.opacity,
-                        ),
-                        _buildSummaryCard(
-                          "MÉDIA DIÁRIA",
-                          "${numberFormat.format(_averageProduction)} L",
-                          Colors.blue,
-                          Icons.trending_up,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTopAnimalCard(numberFormat),
-                    const SizedBox(height: 24),
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Expanded(
-                                  child: Text('Evolução da Produção',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Média: ${numberFormat.format(_averageProduction)}L',
-                                  style: TextStyle(
-                                      color: Colors.blue[700],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              height: 220,
-                              child: _chartData.isEmpty
-                                  ? const Center(
-                                      child: Text("Sem dados no período"))
-                                  : LineChart(_mainChartData()),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text('Histórico do Período',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    ..._dailyTotals.entries.toList().reversed.map((entry) {
-                      final date = DateTime.parse(entry.key);
-                      final formattedDate =
-                          DateFormat('dd/MM/yyyy').format(date);
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          onTap: () =>
-                              _showDetailsDialog(entry.key, formattedDate),
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.green[50],
-                            child: const Icon(Icons.calendar_month,
-                                color: Colors.green),
-                          ),
-                          title: Text(formattedDate,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text(
-                              '${numberFormat.format(entry.value)} Litros produzidos'),
-                          trailing:
-                              const Icon(Icons.arrow_forward_ios, size: 14),
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+    );
+  }
+
+  /// Filtros, cards de resumo, gráfico e o título do histórico.
+  Widget _buildResumo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Wrap: os filtros descem para a linha de baixo se não couberem
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildFilterButton('7 Dias', '7d'),
+            _buildFilterButton('30 Dias', '30d'),
+            _buildFilterButton('Mês Atual', 'mes'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            _buildSummaryCard(
+              "TOTAL PERÍODO",
+              _l(_totalGeral),
+              Colors.green,
+              Icons.opacity,
+            ),
+            _buildSummaryCard(
+              "MÉDIA DIÁRIA",
+              _l(_averageProduction),
+              Colors.blue,
+              Icons.trending_up,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _buildTopAnimalCard(),
+        const SizedBox(height: 24),
+        Card(
+          elevation: 4,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Text('Evolução da Produção',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Média: ${_l(_averageProduction)}',
+                      style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 220,
+                  child: _chartData.isEmpty
+                      ? const Center(child: Text("Sem dados no período"))
+                      // Isola o redesenho do gráfico da rolagem da tela
+                      : RepaintBoundary(child: LineChart(_mainChartData())),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text('Histórico do Período',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildDiaCard(DateTime dia) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: () => _showDetailsDialog(dia),
+        leading: CircleAvatar(
+          backgroundColor: Colors.green[50],
+          child: const Icon(Icons.calendar_month, color: Colors.green),
+        ),
+        title: Text(_dataCompleta.format(dia),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+            '${_litros.format(_totaisPorDia[dia] ?? 0)} litros produzidos'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+      ),
     );
   }
 
@@ -297,7 +336,7 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  Widget _buildTopAnimalCard(NumberFormat nf) {
+  Widget _buildTopAnimalCard() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -306,7 +345,9 @@ class _DashboardViewState extends State<DashboardView> {
           backgroundColor: Colors.orange[50],
           child: Icon(MdiIcons.trophy, color: Colors.orange[800]),
         ),
-        title: const Text('Animal Destaque do Período',
+        title: const Text('Animal destaque',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 12, color: Colors.grey)),
         subtitle: Text(_topAnimal,
             maxLines: 2,
@@ -325,7 +366,7 @@ class _DashboardViewState extends State<DashboardView> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('${nf.format(_topAnimalQty)} L',
+                Text(_l(_topAnimalQty),
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -339,11 +380,28 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
+  /// Escala do eixo Y: começa em zero (o gráfico tem área preenchida) e usa
+  /// passos "redondos" (1, 2 ou 5 x 10^n), resultando em 4 a 5 linhas de grade.
+  ({double max, double passo}) get _escalaY {
+    final maior =
+        _chartData.isEmpty ? 0.0 : _chartData.map((s) => s.y).reduce(max);
+    if (maior <= 0) return (max: 10, passo: 5);
+    final bruto = maior / 4;
+    final potencia = pow(10, (log(bruto) / ln10).floor()).toDouble();
+    final f = bruto / potencia;
+    final passo = (f <= 1 ? 1 : (f <= 2 ? 2 : (f <= 5 ? 5 : 10))) * potencia;
+    return (max: (maior / passo).ceil() * passo, passo: passo);
+  }
+
   LineChartData _mainChartData() {
+    final escala = _escalaY;
     return LineChartData(
+      minY: 0,
+      maxY: escala.max,
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
+        horizontalInterval: escala.passo,
         getDrawingHorizontalLine: (value) =>
             FlLine(color: Colors.grey[200]!, strokeWidth: 1),
       ),
@@ -352,6 +410,21 @@ class _DashboardViewState extends State<DashboardView> {
         rightTitles:
             const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        // Eixo de litros: inteiros, formato brasileiro, numa linha só
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 40,
+            interval: escala.passo,
+            getTitlesWidget: (value, meta) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(_eixo.format(value),
+                  maxLines: 1,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 10)),
+            ),
+          ),
+        ),
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -397,6 +470,8 @@ class _DashboardViewState extends State<DashboardView> {
         LineChartBarData(
           spots: _chartData,
           isCurved: true,
+          // A curva não passa acima/abaixo dos valores reais entre os pontos
+          preventCurveOverShooting: true,
           gradient:
               const LinearGradient(colors: [Colors.green, Colors.lightGreen]),
           barWidth: 4,

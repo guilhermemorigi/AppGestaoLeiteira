@@ -6,6 +6,7 @@ import com.gestao.leiteira.repository.ProductionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -19,8 +20,11 @@ public class ProductionService {
         this.animalService = animalService;
     }
 
-    public List<Production> findAll() {
-        return repository.findAllByOrderByDataDesc();
+    /** Todos os registros ou, se informado, só os a partir de {@code desde}. */
+    public List<Production> findAll(LocalDate desde) {
+        return desde == null
+                ? repository.findAllByOrderByDataDesc()
+                : repository.findByDataGreaterThanEqualOrderByDataDesc(desde.atStartOfDay());
     }
 
     public List<Production> findByAnimal(Long animalId) {

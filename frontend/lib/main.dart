@@ -37,6 +37,11 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
+  /// Abas já visitadas. Cada aba só é montada na 1ª visita e depois fica
+  /// viva no IndexedStack: trocar de aba não recria a tela nem baixa tudo
+  /// de novo (as abas se atualizam sozinhas via ApiService.alteracoes).
+  final Set<int> _abasVisitadas = {0};
+
   static const List<Widget> _widgetOptions = <Widget>[
     DashboardView(),
     AnimalListView(),
@@ -54,7 +59,10 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
+    setState(() {
+      _selectedIndex = index;
+      _abasVisitadas.add(index);
+    });
   }
 
   void _logout() {
@@ -96,7 +104,15 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
       ),
-      body: _widgetOptions.elementAt(_selectedIndex),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          for (var i = 0; i < _widgetOptions.length; i++)
+            _abasVisitadas.contains(i)
+                ? _widgetOptions[i]
+                : const SizedBox.shrink(),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
